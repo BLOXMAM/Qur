@@ -3,106 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تجربة تحميل الخطوط تلقائياً</title>
+    <title>مختبر الخطوط المطور - وضع مظلم</title>
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Reem+Kufi:wght@700&family=Lemonada:wght@600&family=Creepster&family=Pacifico&family=Diplomata+SC&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700&family=Cairo:wght@700&family=Tajawal:wght@700&family=Reem+Kufi:wght@700&family=Aref+Ruqaa:wght@700&family=Marhey:wght@700&family=Pacifico&family=Creepster&family=Diplomata+SC&family=Orbitron:wght@700&family=Bungee+Spice&family=Monoton&display=swap">
     
     <style>
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #151c2c;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-neon: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-green: #00e676;
+        }
+
         body {
-            font-family: sans-serif;
-            background-color: #f0f4f8;
-            color: #1a252f;
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
             padding: 20px;
             margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
             text-align: center;
+            margin-bottom: 40px;
+            max-width: 800px;
         }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 30px;
+
+        header h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, var(--accent-neon), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin: 0;
         }
-        .test-box {
-            margin: 20px 0;
-            padding: 15px;
-            border-bottom: 1px dashed #ccc;
+
+        .status-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 6px 16px;
+            background-color: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--accent-neon);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            color: var(--accent-neon);
         }
-        .font-name {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-            display: block;
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            padding-bottom: 50px;
         }
+
+        .font-card {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .font-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 15px 35px rgba(157, 78, 221, 0.15);
+        }
+
+        .font-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+
+        .font-number {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--accent-neon);
+            background: rgba(0, 242, 254, 0.1);
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .font-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+
+        .sample-text {
+            margin: 15px 0 0 0;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        /* --------------------------------------
+           تعريف تطبيق الـ 12 خطاً على الكلاسات
+        -------------------------------------- */
         
-        /* تطبيق الخطوط المستوردة */
-        .ruqaa {
-            font-family: 'Aref Ruqaa', serif;
-            font-size: 24px;
+        /* 1. الخطوط العربية */
+        .f-amiri {
+            font-family: 'Amiri', serif;
+            font-size: 1.6rem;
         }
-        .kufi {
+        .f-cairo {
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.4rem;
+        }
+        .f-tajawal {
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.4rem;
+        }
+        .f-kufi {
             font-family: 'Reem Kufi', sans-serif;
-            font-size: 24px;
+            font-size: 1.5rem;
         }
-        .lemon {
-            font-family: 'Lemonada', cursive;
-            font-size: 20px;
+        .f-ruqaa {
+            font-family: 'Aref Ruqaa', serif;
+            font-size: 1.6rem;
         }
-        .creep {
-            font-family: 'Creepster', cursive;
-            font-size: 28px;
+        .f-marhey {
+            font-family: 'Marhey', cursive;
+            font-size: 1.4rem;
         }
-        .pacific {
+
+        /* 2. الخطوط الإنجليزية */
+        .f-pacific {
             font-family: 'Pacifico', cursive;
-            font-size: 24px;
+            font-size: 1.5rem;
         }
-        .diplom {
+        .f-creep {
+            font-family: 'Creepster', cursive;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+        }
+        .f-diplom {
             font-family: 'Diplomata SC', cursive;
-            font-size: 20px;
+            font-size: 1.2rem;
+        }
+        .f-orbitron {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+        }
+        .f-bungee {
+            font-family: 'Bungee Spice', sans-serif;
+            font-size: 1.5rem;
+        }
+        .f-monoton {
+            font-family: 'Monoton', cursive;
+            font-size: 1.6rem;
+            color: #ff007f;
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
         }
     </style>
 </head>
 <body>
 
-    <h1>تجربة التخزين التلقائي للخطوط 🚀</h1>
-    
-    <div class="container">
-        <p style="color: #27ae60; font-weight: bold;">إذا ظهرت هذه النصوص بالخطوط الموضحة أسمائها بالأسفل، فهذا يعني أن الكود يعمل بنجاح!</p>
-        
-        <div class="test-box">
-            <span class="font-name">خط الرقعة العربي (Aref Ruqaa)</span>
-            <p class="ruqaa">الحمد لله رب العالمين، الرحمن الرحيم.</p>
+    <header>
+        <h1>مختبر الخطوط النادرة 🧪</h1>
+        <p>صفحة فنية لاختبار الحفظ التلقائي للخطوط الخارجية (Offline Fonts Test)</p>
+        <div class="status-badge">وضع مظلم متكامل • تصفح سلس</div>
+    </header>
+
+    <div class="grid-container">
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط النسخ الكلاسيكي</span>
+                <span class="font-number">01 - Amiri</span>
+            </div>
+            <p class="sample-text f-amiri">الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ، الرَّحْمَنِ الرَّحِيمِ.</p>
         </div>
 
-        <div class="test-box">
-            <span class="font-name">خط الريم الكوفي (Reem Kufi)</span>
-            <p class="kufi">المصحف الشريف وعلوم القرآن الكريم.</p>
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط القاهرة الحديث</span>
+                <span class="font-number">02 - Cairo</span>
+            </div>
+            <p class="sample-text f-cairo">هذا النص مكتوب بخط كشيدة مميز وعصري جداً للواجهات.</p>
         </div>
 
-        <div class="test-box">
-            <span class="font-name">خط ليمونادا الانسيابي (Lemonada)</span>
-            <p class="lemon">تطبيق التسميع الذكي والمتابعة اليومية.</p>
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط تجول الأنيق</span>
+                <span class="font-number">03 - Tajawal</span>
+            </div>
+            <p class="sample-text f-tajawal">جمال الخطوط الهندسية المتزنة في القراءة المريحة للعين.</p>
         </div>
 
-        <div class="test-box">
-            <span class="font-name">خط الرعب الإنجليزي (Creepster)</span>
-            <p class="creep" dir="ltr">This is a scary font style!</p>
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط الريم الكوفي القديم</span>
+                <span class="font-number">04 - Reem Kufi</span>
+            </div>
+            <p class="sample-text f-kufi">جمال وروعة الخط الكوفي الأصيل للقرآن الكريم.</p>
         </div>
 
-        <div class="test-box">
-            <span class="font-name">خط الكتابة اليدوية (Pacifico)</span>
-            <p class="pacific" dir="ltr">Beautiful Handwritten Web Font</p>
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط الرقعة الفني</span>
+                <span class="font-number">05 - Aref Ruqaa</span>
+            </div>
+            <p class="sample-text f-ruqaa">سجل المتابعة والتقييم اليومي لحفظ القرآن الكريم.</p>
         </div>
 
-        <div class="test-box">
-            <span class="font-name">خط النقش الإمبراطوري (Diplomata SC)</span>
-            <p class="diplom" dir="ltr">ROMAN STYLE FONT</p>
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط مرحي الترفيهي</span>
+                <span class="font-number">06 - Marhey</span>
+            </div>
+            <p class="sample-text f-marhey">تصميم فكاهي ومبهج لعرض الإعلانات والتنبيهات!</p>
         </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط الكتابة اليدوية الإنسيابي</span>
+                <span class="font-number">07 - Pacifico</span>
+            </div>
+            <p class="sample-text f-pacific" dir="ltr">Beautiful Handwritten Script Style.</p>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط سينما الرعب المخيف</span>
+                <span class="font-number">08 - Creepster</span>
+            </div>
+            <p class="sample-text f-creep" dir="ltr">SPOOKY HALLOWEEN DISPLAY!</p>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط النقش الروماني العتيق</span>
+                <span class="font-number">09 - Diplomata SC</span>
+            </div>
+            <p class="sample-text f-diplom" dir="ltr">HISTORICAL ROMAN EMPEROR STYLE.</p>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط الخيال العلمي والمستقبل</span>
+                <span class="font-number">10 - Orbitron</span>
+            </div>
+            <p class="sample-text f-orbitron" dir="ltr">SYSTEM ONLINE. FUTURE IS NOW.</p>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط ثنائي الأبعاد الملون ثلاثي الأبعاد</span>
+                <span class="font-number">11 - Bungee Spice</span>
+            </div>
+            <p class="sample-text f-bungee" dir="ltr">RETRO CHUNKY POP ART!</p>
+        </div>
+
+        <div class="font-card">
+            <div class="font-info">
+                <span class="font-title">خط النيون المضيء</span>
+                <span class="font-number">12 - Monoton</span>
+            </div>
+            <p class="sample-text f-monoton" dir="ltr">NEON LIGHTS</p>
+        </div>
+
     </div>
 
 </body>
