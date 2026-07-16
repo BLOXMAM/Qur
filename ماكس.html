@@ -331,6 +331,21 @@
 <body>
 
     <header>
+<!-- زر فتح القائمة (ضع هذا الزر داخل الهيدر الخاص بصفحتك) -->
+<button onclick="toggleDrawer()" style="background: none; border: none; font-size: 24px; cursor: pointer;">☰</button>
+
+<!-- خلفية التعتيم والقائمة الجانبية -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+<nav class="drawer" id="drawer">
+    <div class="drawer-header">تصفح السور والصفحات</div>
+    
+    <!-- مؤشر التحميل أثناء جلب الصفحات -->
+    <div id="drawerLoader" class="drawer-loader"></div>
+
+    <ul class="drawer-menu" id="drawerDynamicMenu">
+        <!-- الصفحات ستُدرج تلقائياً هنا -->
+    </ul>
+</nav>
         <h1><i class="ph ph-book-open"></i> تجربة (المعاينة)</h1>
         <div class="header-actions">
             <button class="btn btn-info" onclick="exportData()"><i class="ph ph-download-simple"></i> تصدير نسخة احتياطية</button>
@@ -1788,20 +1803,6 @@ function openPage(fileName) {
 
 // تشغيل الـ Drawer تلقائياً فور تحميل الصفحة
 window.addEventListener('DOMContentLoaded', initDrawer);
-</script><!-- زر فتح القائمة (ضع هذا الزر داخل الهيدر الخاص بصفحتك) -->
-<button onclick="toggleDrawer()" style="background: none; border: none; font-size: 24px; cursor: pointer;">☰</button>
-
-<!-- خلفية التعتيم والقائمة الجانبية -->
-<div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
-<nav class="drawer" id="drawer">
-    <div class="drawer-header">تصفح السور والصفحات</div>
-    
-    <!-- مؤشر التحميل أثناء جلب الصفحات -->
-    <div id="drawerLoader" class="drawer-loader"></div>
-
-    <ul class="drawer-menu" id="drawerDynamicMenu">
-        <!-- الصفحات ستُدرج تلقائياً هنا -->
-    </ul>
-</nav>
+</script>
 </body>
 </html>
