@@ -173,9 +173,8 @@
                 const sizeInKB = (file.size / 1024).toFixed(1);
 
                 listItem.innerHTML = `
-                    <a class="page-link" href="${targetUrl}">${readableTitle}</a>
-                    <span class="file-size">الحجم: ${sizeInKB} كيلوبايت</span>
-                `;
+                     <a class="page-link" href="#" onclick="openPage('${file.name}'); return false;">${readableTitle}</a>
+    <span class="file-size">الحجم: ${sizeInKB} كيلوبايت</span>   `;
                 pagesList.appendChild(listItem);
             });
         }
@@ -227,6 +226,21 @@
         window.addEventListener('offline', updateStatusIndicator);
 
         window.onload = initPage;
+// دالة ذكية لتحديد طريقة فتح الصفحة بناءً على حالة الإنترنت
+function openPage(fileName) {
+    if (navigator.onLine) {
+        // إذا كان أونلاين: يفتح الرابط السحابي المباشر
+        window.location.href = `https://raw.githubusercontent.com/${username}/${repo}/main/${fileName}`;
+    } else {
+        // إذا كان أوفلاين: يرسل اسم الملف فقط إلى كود الأندرويد ليفتحه بأمان
+        if (window.Android && typeof window.Android.openLocalPage === 'function') {
+            window.Android.openLocalPage(fileName);
+        } else {
+            // حل احتياطي في حال لم يتعرف على الجسر فوراً
+            window.location.href = fileName; 
+        }
+    }
+}
     </script>
 </body>
 </html>
