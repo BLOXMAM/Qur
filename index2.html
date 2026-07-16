@@ -1,64 +1,219 @@
-<!-- حاوية لعرض الصفحات الديناميكية المضافة من الأدمن -->
-<div id="dynamic-pages-section" style="margin: 15px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: none;">
-    <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px;">صفحات وخدمات إضافية</h3>
-    <div id="pages-container" style="display: flex; flex-direction: column; gap: 8px;">
-        <!-- سيتم توليد الأزرار هنا تلقائياً -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستعرض الصفحات التفاعلي</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .main-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #18bc9c;
+            padding-bottom: 10px;
+            font-size: 1.4rem;
+        }
+        .pages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .page-btn {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #2d3748;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            text-align: right;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .page-btn:hover {
+            border-color: #18bc9c;
+            background: #eefbf9;
+            color: #16a085;
+            transform: translateY(-2px);
+        }
+        .arrow {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+        /* نافذة العرض المنبثقة لعرض الصفحة المترجمة */
+        #viewer-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+        }
+        .modal-content {
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            width: 90%;
+            height: 90%;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            background: #2c3e50;
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <div class="card">
+        <h2>📄 الصفحات والخدمات الإضافية المتاحة</h2>
+        <div id="pages-container" class="pages-list">
+            <!-- سيتم توليد الأزرار ديناميكياً هنا -->
+            <div style="text-align: center; color: #7f8c8d; padding: 20px;">جاري تحميل قائمة الصفحات...</div>
+        </div>
+    </div>
+</div>
+
+<!-- مستعرض الصفحات (المترجم الفوري) -->
+<div id="viewer-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span id="modal-title" style="font-weight: bold;">مستعرض الصفحات</span>
+            <button class="close-btn" onclick="closeViewer()">إغلاق ✕</button>
+        </div>
+        <!-- هنا يكمن السحر: الـ iframe الذي سنحقن داخله الصفحة المترجمة -->
+        <iframe id="page-loader-iframe"></iframe>
     </div>
 </div>
 
 <script>
-    // الإعدادات الخاصة بمستودعك (تطابق الإعدادات التي يرفع عليها الأدمن)
-    const GIT_USER = "BLOXMAM"; // اسم مستخدم جيت هاب الخاص بك
-    const GIT_REPO = "Qur";     // اسم المستودع
-
     document.addEventListener("DOMContentLoaded", function() {
-        fetchDynamicPages();
+        loadOfflinePagesList();
     });
 
-    function fetchDynamicPages() {
-        const url = `https://api.github.com/repos/${GIT_USER}/${GIT_REPO}/contents`;
-
-        fetch(url)
+    // 1. قراءة الملف النصي المحلي لمعرفة الصفحات المتوفرة (أوفلاين)
+    function loadOfflinePagesList() {
+        fetch("pages_list.txt")
         .then(response => {
-            if(!response.ok) throw new Error();
-            return response.json();
+            if (!response.ok) throw new Error();
+            return response.text();
         })
-        .then(data => {
-            // فلترة جلب ملفات الـ HTML فقط واستبعاد الملف الرئيسي index.html أو index1.html
-            const pages = data.filter(file => 
-                file.type === "file" && 
-                file.name.toLowerCase().endsWith(".html") && 
-                file.name.toLowerCase() !== "index.html" && 
-                file.name.toLowerCase() !== "index1.html"
-            );
-
-            if(pages.length > 0) {
-                const section = document.getElementById("dynamic-pages-section");
-                const container = document.getElementById("pages-container");
-                
-                section.style.display = "block"; // إظهار القسم لوجود صفحات جديدة
+        .then(text => {
+            const fileNames = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
+            const container = document.getElementById("pages-container");
+            
+            if (fileNames.length > 0) {
                 container.innerHTML = "";
-
-                pages.forEach(page => {
-                    const cleanName = page.name.replace(".html", ""); // إزالة الامتداد للعرض الجمالي
+                fileNames.forEach(fileName => {
+                    const cleanName = fileName.replace(".html", "");
+                    
+                    // إنشاء زر لكل صفحة
                     const btn = document.createElement("button");
+                    btn.className = "page-btn";
+                    btn.innerHTML = `<span>📂 ${cleanName}</span> <span class="arrow">عرض الآن ←</span>`;
                     
-                    // تصميم أنيق مريح للضغط كأنه زر في تطبيق أندرويد
-                    btn.style.cssText = "width: 100%; padding: 12px; border: 1px solid #18bc9c; background: #eefbf9; color: #16a085; border-radius: 6px; font-weight: bold; font-size: 0.95rem; text-align: right; cursor: pointer; display: flex; justify-content: space-between; align-items: center;";
-                    btn.innerHTML = `<span>📄 ${cleanName}</span> <span style="font-size: 0.8rem; color: #7f8c8d;">اضغط للفتح ←</span>`;
-                    
-                    // عند الضغط، يفتح الرابط مباشرة في نفس الـ WebView كأنه أكتيفيتي داخلي
+                    // عند الضغط: نترجم ونعرض محتوى الصفحة فوراً
                     btn.onclick = function() {
-                        window.location.href = `https://${GIT_USER}.github.io/${GIT_REPO}/${page.name}`;
+                        translateAndLoadPage(fileName, cleanName);
                     };
                     
                     container.appendChild(btn);
                 });
+            } else {
+                showEmptyMessage();
             }
         })
-        .catch(err => {
-            // في حال عدم وجود إنترنت، سيختفي القسم تلقائياً ليعمل التطبيق أوفلاين بسلام تام
-            document.getElementById("dynamic-pages-section").style.display = "none";
+        .catch(() => {
+            showEmptyMessage();
         });
     }
+
+    // 2. سحر الترجمة والتشغيل: قراءة ملف الـ HTML المحلي وتحويله لصفحة ويب تفاعلية داخل الـ iframe
+    function translateAndLoadPage(fileName, pageTitle) {
+        // نقوم بجلب محتوى الملف المحلي الذي تم تنزيله بواسطة تطبيق الأندرويد سابقاً
+        fetch(fileName)
+        .then(response => {
+            if (!response.ok) throw new Error("تعذر قراءة الملف المحلي");
+            return response.text();
+        })
+        .then(htmlContent => {
+            // "الترجمة": نقوم بتحويل النص البرمجي الخام (Raw Text) إلى كائن كود تفاعلي (HTML Blob)
+            const blob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+            const blobURL = URL.createObjectURL(blob);
+            
+            // شحن الرابط المترجم التفاعلي داخل الـ iframe
+            const iframe = document.getElementById("page-loader-iframe");
+            iframe.src = blobURL;
+            
+            // فتح مستعرض الصفحات وعرض النتيجة لليوزر
+            document.getElementById("modal-title").innerText = pageTitle;
+            document.getElementById("viewer-modal").style.display = "block";
+        })
+        .catch(err => {
+            alert("❌ خطأ: لم يتم تحميل هذه الصفحة بعد أو أنها غير متوفرة أوفلاين حالياً.");
+        });
+    }
+
+    function closeViewer() {
+        document.getElementById("viewer-modal").style.display = "none";
+        document.getElementById("page-loader-iframe").src = ""; // تفريغ الذاكرة
+    }
+
+    function showEmptyMessage() {
+        document.getElementById("pages-container").innerHTML = `
+            <div style="text-align: center; color: #95a5a6; padding: 20px;">
+                <p>لا توجد صفحات إضافية مثبتة حالياً.</p>
+                <small style="color: #bdc3c7;">سيتم تحميل الصفحات تلقائياً عند الاتصال بالإنترنت.</small>
+            </div>`;
+    }
 </script>
+
+</body>
+</html>
