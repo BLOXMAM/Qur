@@ -142,17 +142,27 @@
         }
 
         select {
-            padding: 10px;
-            font-size: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: var(--card-bg);
-            color: var(--text-color);
-            outline: none;
-            flex: 1 1 150px;
-            min-width: 120px;
-            font-family: inherit;
-        }
+    padding: 10px;
+    /* إزاحة النص من اليمين لترك مساحة للأيقونة */
+    padding-right: 35px; 
+    font-size: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    
+    /* إضافة أيقونة مستخدم SVG ثابتة داخل الحقل */
+    background: var(--card-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%2316a085' d='M230.24 205.47a110 110 0 0 0-38.16-31.95a74 74 0 1 0-128.16 0a110 110 0 0 0-38.16 31.95a6 6 0 1 0 10.48 5.86c12.28-22 36.63-35.33 65.76-35.33h52c29.13 0 53.48 13.36 65.76 35.33a6 6 0 1 0 10.48-5.86ZM128 154a62 62 0 1 1 62-62a62.07 62.07 0 0 1-62 62Z'/%3E%3C/svg%3E") no-repeat;
+    
+    /* تحديد موقع الأيقونة في أقصى اليمين وتوسيطها عمودياً */
+    background-position: calc(100% - 10px) center;
+    /* حجم الأيقونة داخل الحقل */
+    background-size: 20px 20px;
+    
+    color: var(--text-color);
+    outline: none;
+    flex: 1 1 150px;
+    min-width: 120px;
+    font-family: inherit;
+}
 
         .student-actions {
             display: flex;
