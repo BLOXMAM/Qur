@@ -159,22 +159,13 @@
                 const listItem = document.createElement("li");
                 listItem.className = "page-card";
 
-                let targetUrl = "";
-                
-                if (navigator.onLine) {
-                    // إذا كان متصلاً بالإنترنت: يفتح من رابط الـ Raw المترجم في السحاب
-                    targetUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/${file.name}`;
-                } else {
-                    // إذا كان أوفلاين: يوجه WebView مباشرة للملف الذي قام كود الجافا بحفظه محلياً في جهازك
-                    targetUrl = `file:///data/user/0/${window.location.pathname.split('/')[3]}/files/${file.name}`;
-                }
-
                 const readableTitle = formatTitle(file.name);
                 const sizeInKB = (file.size / 1024).toFixed(1);
 
                 listItem.innerHTML = `
-                     <a class="page-link" href="#" onclick="openPage('${file.name}'); return false;">${readableTitle}</a>
-    <span class="file-size">الحجم: ${sizeInKB} كيلوبايت</span>   `;
+                    <a class="page-link" href="#" onclick="openPage('${file.name}'); return false;">${readableTitle}</a>
+                    <span class="file-size">الحجم: ${sizeInKB} كيلوبايت</span>
+                `;
                 pagesList.appendChild(listItem);
             });
         }
@@ -226,21 +217,17 @@
         window.addEventListener('offline', updateStatusIndicator);
 
         window.onload = initPage;
-// دالة ذكية لتحديد طريقة فتح الصفحة بناءً على حالة الإنترنت
-function openPage(fileName) {
-    if (navigator.onLine) {
-        // إذا كان أونلاين: يفتح الرابط السحابي المباشر
-        window.location.href = `https://raw.githubusercontent.com/${username}/${repo}/main/${fileName}`;
-    } else {
-        // إذا كان أوفلاين: يرسل اسم الملف فقط إلى كود الأندرويد ليفتحه بأمان
-        if (window.Android && typeof window.Android.openLocalPage === 'function') {
-            window.Android.openLocalPage(fileName);
-        } else {
-            // حل احتياطي في حال لم يتعرف على الجسر فوراً
-            window.location.href = fileName; 
+
+        // دالة ذكية وموحدة لفتح كافة الصفحات عن طريق كود الأندرويد المحلي لمنع التعليق
+        function openPage(fileName) {
+            if (window.Android && typeof window.Android.openLocalPage === 'function') {
+                // إرسال الملف مباشرة للأندرويد ليتولى معالجته بشكل ذكي (محلي / سحابي)
+                window.Android.openLocalPage(fileName);
+            } else {
+                // حل احتياطي تفادياً لأي طارئ
+                window.location.href = fileName; 
+            }
         }
-    }
-}
     </script>
 </body>
 </html>
