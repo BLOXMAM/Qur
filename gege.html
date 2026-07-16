@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gege</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #18bc9c;
+            --bg: #f5f6fa;
+            --text: #333;
+            --drawer-width: 250px;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+        .drawer {
+            width: var(--drawer-width);
+            background: var(--primary);
+            color: white;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .drawer.closed {
+            transform: translateX(100%);
+        }
+        .drawer h3 {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+            margin-top: 0;
+        }
+        .drawer-links {
+            list-style: none;
+            padding: 0;
+        }
+        .drawer-links li {
+            margin: 15px 0;
+        }
+        .drawer-links a {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-size: 1.1rem;
+            display: block;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .drawer-links a:hover {
+            background: var(--accent);
+        }
+        .main-content {
+            margin-right: var(--drawer-width);
+            padding: 40px;
+            width: 100%;
+            transition: margin-right 0.3s ease;
+            box-sizing: border-box;
+        }
+        .main-content.expanded {
+            margin-right: 0;
+        }
+        .toggle-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .drawer {
+                transform: translateX(100%);
+            }
+            .drawer.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-right: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="myDrawer" class="drawer">
+        <h3>قائمة المشروع</h3>
+        <ul class="drawer-links">
+            <li><a href="#">الرئيسية</a></li>
+            <li><a href="#">الملفات والمستندات</a></li>
+            <li><a href="#">الإعدادات العامة</a></li>
+        </ul>
+        <div style="margin-top: 30px; font-size: 0.8rem; opacity: 0.7; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+            <p><strong>المستخدم:</strong> BLOXMAM</p>
+            <p><strong>المشروع:</strong> Qur</p>
+        </div>
+    </div>
+
+    <div id="mainContent" class="main-content">
+        <button class="toggle-btn" onclick="toggleDrawer()">☰ القائمة الجانبية</button>
+        <h1>أهلاً بك في صفحة gege الجديدة</h1>
+        <p>تم إنشاؤها وتكوينها تلقائياً بالتكامل مع بياناتك المسجلة.</p>
+    </div>
+
+    <script>
+        const config = {
+            username: localStorage.getItem("git_user") || "",
+            project: localStorage.getItem("git_repo") || ""
+        };
+        
+        function toggleDrawer() {
+            const drawer = document.getElementById('myDrawer');
+            const main = document.getElementById('mainContent');
+            if (window.innerWidth > 768) {
+                drawer.classList.toggle('closed');
+                main.classList.toggle('expanded');
+            } else {
+                drawer.classList.toggle('open');
+            }
+        }
+    </script>
+
+</body>
+</html>
