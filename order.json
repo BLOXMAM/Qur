@@ -1,11 +1,11 @@
 [
   {
-    "file": "index1.html",
-    "title": "مختصر"
-  },
-  {
     "file": "index2.html",
     "title": "الرئيسية"
+  },
+  {
+    "file": "index1.html",
+    "title": "مختصر"
   },
   {
     "file": "ems.html",
