@@ -1,7 +1,22 @@
 [
-  "index1.html",
-  "index2.html",
-  "Kemspotie.html",
-  "wor.html",
-  "wost.html"
+  {
+    "file": "index1.html",
+    "title": "مختصر"
+  },
+  {
+    "file": "index2.html",
+    "title": "الرئيسية"
+  },
+  {
+    "file": "Kemspotie.html",
+    "title": "Kemspotie"
+  },
+  {
+    "file": "wor.html",
+    "title": "wor"
+  },
+  {
+    "file": "wost.html",
+    "title": "wost"
+  }
 ]
