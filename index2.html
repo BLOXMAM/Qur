@@ -1,82 +1,64 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>index2</title>
-    <style>
-        :root { --primary-color: #2c3e50; --accent-color: #16a085; --card-bg: #ffffff; }
-        body { font-family: sans-serif; margin: 0; background: #f5f6fa; }
-        header { background: var(--primary-color); padding: 15px; color: white; display: flex; align-items: center; }
-        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; display: none; }
-        .drawer { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--card-bg); z-index: 1002; transition: right 0.3s; display: flex; flex-direction: column; }
-        .drawer.open { right: 0; }
-        .drawer-header { background: var(--primary-color); color: white; padding: 20px; font-weight: bold; }
-        .drawer-menu { list-style: none; padding: 10px 0; }
-        .drawer-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
-        .drawer-loader { border: 3px solid #f3f3f3; border-top: 3px solid var(--accent-color); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
-
-<header>
-    <button onclick="toggleDrawer()" style="background:none; border:none; font-size:24px; cursor:pointer; color:white;">☰</button>
-    <span style="margin-right: 15px; font-weight:bold;">index2</span>
-</header>
-
-<div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
-<nav class="drawer" id="drawer">
-    <div class="drawer-header">تصفح السور والصفحات</div>
-    <div id="drawerLoader" class="drawer-loader"></div>
-    <ul class="drawer-menu" id="drawerDynamicMenu"></ul>
-</nav>
-
-<main style="padding: 20px;">
-    <h1>صفحة index2</h1>
-    <p>هذه الصفحة تقوم بقراءة الترتيب والأسماء المخصصة من ملف order.json تلقائياً.<a href="mix.html">Mix</a></p>
-</main>
+<!-- حاوية لعرض الصفحات الديناميكية المضافة من الأدمن -->
+<div id="dynamic-pages-section" style="margin: 15px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: none;">
+    <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px;">صفحات وخدمات إضافية</h3>
+    <div id="pages-container" style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- سيتم توليد الأزرار هنا تلقائياً -->
+    </div>
+</div>
 
 <script>
-    const username = "BLOXMAM";
-    const repo = "Qur";
+    // الإعدادات الخاصة بمستودعك (تطابق الإعدادات التي يرفع عليها الأدمن)
+    const GIT_USER = "BLOXMAM"; // اسم مستخدم جيت هاب الخاص بك
+    const GIT_REPO = "Qur";     // اسم المستودع
 
-    function toggleDrawer() {
-        const drawer = document.getElementById("drawer");
-        const overlay = document.getElementById("drawerOverlay");
-        drawer.classList.toggle("open");
-        overlay.style.display = drawer.classList.contains("open") ? "block" : "none";
-    }
+    document.addEventListener("DOMContentLoaded", function() {
+        fetchDynamicPages();
+    });
 
-    function renderDrawerContent(orderedPages) {
-        const drawerMenu = document.getElementById("drawerDynamicMenu");
-        drawerMenu.innerHTML = "";
-        orderedPages.forEach(page => {
-            const li = document.createElement("li");
-            li.className = "drawer-item";
-            // استخدام العنوان المخصص (title) بدلاً من اسم الملف
-            li.innerHTML = "<span>" + page.title + "</span><span>📖</span>";
-            li.onclick = () => { window.location.href = page.file; };
-            drawerMenu.appendChild(li);
+    function fetchDynamicPages() {
+        const url = `https://api.github.com/repos/${GIT_USER}/${GIT_REPO}/contents`;
+
+        fetch(url)
+        .then(response => {
+            if(!response.ok) throw new Error();
+            return response.json();
+        })
+        .then(data => {
+            // فلترة جلب ملفات الـ HTML فقط واستبعاد الملف الرئيسي index.html أو index1.html
+            const pages = data.filter(file => 
+                file.type === "file" && 
+                file.name.toLowerCase().endsWith(".html") && 
+                file.name.toLowerCase() !== "index.html" && 
+                file.name.toLowerCase() !== "index1.html"
+            );
+
+            if(pages.length > 0) {
+                const section = document.getElementById("dynamic-pages-section");
+                const container = document.getElementById("pages-container");
+                
+                section.style.display = "block"; // إظهار القسم لوجود صفحات جديدة
+                container.innerHTML = "";
+
+                pages.forEach(page => {
+                    const cleanName = page.name.replace(".html", ""); // إزالة الامتداد للعرض الجمالي
+                    const btn = document.createElement("button");
+                    
+                    // تصميم أنيق مريح للضغط كأنه زر في تطبيق أندرويد
+                    btn.style.cssText = "width: 100%; padding: 12px; border: 1px solid #18bc9c; background: #eefbf9; color: #16a085; border-radius: 6px; font-weight: bold; font-size: 0.95rem; text-align: right; cursor: pointer; display: flex; justify-content: space-between; align-items: center;";
+                    btn.innerHTML = `<span>📄 ${cleanName}</span> <span style="font-size: 0.8rem; color: #7f8c8d;">اضغط للفتح ←</span>`;
+                    
+                    // عند الضغط، يفتح الرابط مباشرة في نفس الـ WebView كأنه أكتيفيتي داخلي
+                    btn.onclick = function() {
+                        window.location.href = `https://${GIT_USER}.github.io/${GIT_REPO}/${page.name}`;
+                    };
+                    
+                    container.appendChild(btn);
+                });
+            }
+        })
+        .catch(err => {
+            // في حال عدم وجود إنترنت، سيختفي القسم تلقائياً ليعمل التطبيق أوفلاين بسلام تام
+            document.getElementById("dynamic-pages-section").style.display = "none";
         });
     }
-
-    async function initDrawer() {
-        const loader = document.getElementById("drawerLoader");
-        try {
-            const res = await fetch(`https://api.github.com/repos/${username}/${repo}/contents/order.json`);
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            const decoded = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ""))));
-            const orderedPages = JSON.parse(decoded);
-            renderDrawerContent(orderedPages);
-        } catch(e) {
-            console.log("خطأ في تحميل القائمة الجانبية");
-        } finally {
-            loader.style.display = "none";
-        }
-    }
-    initDrawer();
 </script>
-</body>
-</html>
