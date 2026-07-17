@@ -54,7 +54,7 @@
         htmlFiles.forEach(file => {
             const li = document.createElement("li");
             li.className = "drawer-item";
-            li.innerHTML = "<span>" + file.name.replace(".html", "") + "</span><span>📖</span>";
+            li.innerHTML = "<span>" + file.name.replace(".html", "") + "</span><span></span>";
             li.onclick = () => { window.location.href = file.name; };
             drawerMenu.appendChild(li);
         });
