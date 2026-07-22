@@ -1688,5 +1688,137 @@
             event.target.value = '';
         }
     </script>
+<!-- ======================================================== -->
+<!-- سكريبت المزامنة الذكية مع GitHub (بيانات مشفرة بـ Base64) -->
+<!-- ======================================================== -->
+<script>
+    // 1. البيانات الخاصة بك بعد تشفيرها بـ Base64 لزيادة الأمان
+    const ENCRYPTED_CONFIG = {
+        token: "Z2l0aHViX3BhdF8xMUFaVkpPQlEwaVVkemFTZUdyNEMxX2ZyVVB3TnA4VmhsU01HNjNRdFFnSTNGZ1FkUjZBaDZjWU5ibzFMaHdzTTVJTThISzZORUV1RDhFYkFS",
+        owner: "QkxPWE1BTQ==",
+        repo: "UXVy",
+        path: "cXVyYW5fZGF0YS5qc29u" // اسم ملف البيانات: quran_data.json
+    };
+
+    // 2. دالة فك التشفير التلقائية وقت التشغيل
+    function getDecryptedConfig() {
+        return {
+            token: atob(ENCRYPTED_CONFIG.token),
+            owner: atob(ENCRYPTED_CONFIG.owner),
+            repo: atob(ENCRYPTED_CONFIG.repo),
+            path: atob(ENCRYPTED_CONFIG.path)
+        };
+    }
+
+    // 3. تجميع كافة بيانات الـ LocalStorage الحالية في التطبيق
+    function getFullLocalStorageData() {
+        const backup = {
+            groups: localStorage.getItem('quran_groups_list'),
+            currentGroupId: localStorage.getItem('quran_current_group_id'),
+            students: localStorage.getItem('quran_students_list'),
+            currentId: localStorage.getItem('quran_current_student_id'),
+            settings: localStorage.getItem('quran_teacher_settings'),
+            sortOrder: localStorage.getItem('quran_sort_order'),
+            lastUpdated: Date.now()
+        };
+        return JSON.stringify(backup);
+    }
+
+    // 4. تطبيق البيانات القادمة من GitHub على الـ LocalStorage
+    function applyDataToLocal(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            if (data.groups) localStorage.setItem('quran_groups_list', data.groups);
+            if (data.currentGroupId) localStorage.setItem('quran_current_group_id', data.currentGroupId);
+            if (data.students) localStorage.setItem('quran_students_list', data.students);
+            if (data.currentId) localStorage.setItem('quran_current_student_id', data.currentId);
+            if (data.settings) localStorage.setItem('quran_teacher_settings', data.settings);
+            if (data.sortOrder) localStorage.setItem('quran_sort_order', data.sortOrder);
+
+            // تحديث الواجهة عبر استدعاء دوال ملفك الأصلي
+            if (typeof loadSettings === 'function') loadSettings();
+            if (typeof loadGroupsData === 'function') loadGroupsData();
+            if (typeof loadStudentsData === 'function') loadStudentsData();
+            if (typeof renderList === 'function') renderList();
+            
+            console.log("تمت المزامنة بنجاح وتحديث البيانات المحلية من GitHub.");
+        } catch (e) {
+            console.error("خطأ أثناء قراءة بيانات JSON:", e);
+        }
+    }
+
+    // 5. محرك المزامنة الرئيسي ومقارنة الأحجام
+    async function syncDataWithGitHub() {
+        if (!navigator.onLine) return; // العمل أوفلاين في حال عدم توفر الإنترنت
+
+        const config = getDecryptedConfig();
+        const apiUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`;
+        const localJsonStr = getFullLocalStorageData();
+
+        try {
+            // جلب البيانات من GitHub
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${config.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (response.ok) {
+                const remoteData = await response.json();
+                const remoteSha = remoteData.sha;
+                
+                // فك تشفير UTF-8 للبيانات القادمة من GitHub
+                const decodedRemoteContent = decodeURIComponent(escape(atob(remoteData.content.replace(/\n/g, ''))));
+
+                // إذا كانت البيانات المحلية أكثر أو تتساوى -> رفع إلى GitHub
+                if (localJsonStr.length >= decodedRemoteContent.length) {
+                    await pushToGitHub(apiUrl, config.token, localJsonStr, remoteSha);
+                } else {
+                    // إذا بيانات GitHub أكثر -> تحديث المحتوى المحلي
+                    applyDataToLocal(decodedRemoteContent);
+                }
+
+            } else if (response.status === 404) {
+                // إنشاء الملف لأول مرة في المستودع
+                await pushToGitHub(apiUrl, config.token, localJsonStr, null);
+            }
+        } catch (error) {
+            console.error("فشلت عملية المزامنة مع GitHub:", error);
+        }
+    }
+
+    // 6. دالة رفع وتحديث الملف في GitHub
+    async function pushToGitHub(apiUrl, token, contentString, sha) {
+        const encodedContent = btoa(unescape(encodeURIComponent(contentString)));
+        const bodyData = {
+            message: "تحديث تلقائي لسجل تحفيظ القرآن",
+            content: encodedContent
+        };
+        if (sha) bodyData.sha = sha;
+
+        await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bodyData)
+        });
+    }
+
+    // 7. تشغيل التزامن تلقائياً (عند الفتح + عند النقر على الأزرار)
+    window.addEventListener('load', () => {
+        setTimeout(syncDataWithGitHub, 1000);
+    });
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (btn) {
+            setTimeout(syncDataWithGitHub, 500);
+        }
+    });
+</script>
 </body>
 </html>
