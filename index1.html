@@ -1688,9 +1688,6 @@
             event.target.value = '';
         }
     </script>
-<!-- ======================================================== -->
-<!-- سكريبت المزامنة الذكية مع GitHub (مع نظام فحص الأخطاء) -->
-<!-- ======================================================== -->
 <script>
     const ENCRYPTED_CONFIG = {
         token: "Z2l0aHViX3BhdF8xMUFaVkpPQlEwaVVkemFTZUdyNEMxX2ZyVVB3TnA4VmhsU01HNjNRdFFnSTNGZ1FkUjZBaDZjWU5ibzFMaHdzTTVJTThISzZORUV1RDhFYkFS",
@@ -1701,10 +1698,11 @@
 
     function getDecryptedConfig() {
         return {
-            token: atob(ENCRYPTED_CONFIG.token),
-            owner: atob(ENCRYPTED_CONFIG.owner),
-            repo: atob(ENCRYPTED_CONFIG.repo),
-            path: atob(ENCRYPTED_CONFIG.path)
+            // إضافة trim() لإزالة أي مسافات مخفية أو أسطر جديدة
+            token: atob(ENCRYPTED_CONFIG.token.trim()).trim(),
+            owner: atob(ENCRYPTED_CONFIG.owner.trim()).trim(),
+            repo: atob(ENCRYPTED_CONFIG.repo.trim()).trim(),
+            path: atob(ENCRYPTED_CONFIG.path.trim()).trim()
         };
     }
 
@@ -1756,8 +1754,10 @@
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `token ${config.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
+                    // استخدام Bearer بدلاً من token
+                    'Authorization': `Bearer ${config.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'QuranApp'
                 }
             });
 
@@ -1765,7 +1765,6 @@
                 const remoteData = await response.json();
                 const remoteSha = remoteData.sha;
                 
-                // فك التشفير بأمان لدعم اللغة العربية
                 const decodedRemoteContent = decodeURIComponent(escape(atob(remoteData.content.replace(/\s/g, ''))));
 
                 if (localJsonStr.length >= decodedRemoteContent.length) {
@@ -1775,7 +1774,6 @@
                 }
 
             } else if (response.status === 404) {
-                // الملف غير موجود -> إنشاء ملف جديد
                 await pushToGitHub(apiUrl, config.token, localJsonStr, null);
             } else {
                 alert(`❌ فشل الاتصال بـ GitHub. رمز الخطأ: ${response.status}`);
@@ -1786,7 +1784,6 @@
     }
 
     async function pushToGitHub(apiUrl, token, contentString, sha) {
-        // تشفير اللغة العربية إلى Base64 بأمان
         const encodedContent = btoa(unescape(encodeURIComponent(contentString)));
         const bodyData = {
             message: "تحديث تلقائي لسجل تحفيظ القرآن",
@@ -1797,8 +1794,10 @@
         const res = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${token}`,
-                'Content-Type': 'application/json'
+                // استخدام Bearer بدلاً من token
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'QuranApp'
             },
             body: JSON.stringify(bodyData)
         });
@@ -1811,7 +1810,6 @@
         }
     }
 
-    // تشغيل التزامن بعد تحميل الصفحة بـ 1.5 ثانية
     window.addEventListener('load', () => {
         setTimeout(syncDataWithGitHub, 1500);
     });
