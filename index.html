@@ -6,7 +6,6 @@
     <title>سجل المتابعة لحفظ القرآن الكريم</title>
     
     <link rel="stylesheet" href="file:///android_asset/icons.css">
-    <!--<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&display=swap">-->
     <style>
         @font-face {
             font-family: 'Uthmani';
@@ -114,6 +113,7 @@
         .btn-secondary { background-color: #64748b; color: white !important; }
         .btn-danger { background-color: var(--danger-color); color: white !important; }
         .btn-info { background-color: #2980b9; color: white !important; }
+        .btn-warning { background-color: var(--warning-color); color: white !important; }
 
         .student-management-bar {
             max-width: 1100px;
@@ -139,6 +139,15 @@
             font-weight: bold;
             white-space: nowrap;
             font-size: 15px;
+        }
+
+        .students-count-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
         }
 
         select {
@@ -261,7 +270,7 @@
 
         .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-weight: bold; font-size: 14px; }
-        .form-group input {
+        .form-group input, .form-group select {
             padding: 10px;
             border: 1px solid var(--border-color);
             background: var(--bg-color);
@@ -345,6 +354,7 @@
             <label>اختر الطالب:</label>
             <select id="studentSelect" onchange="onStudentChanged()">
             </select>
+            <span class="students-count-badge" id="studentsCountBadge">العدد: 0</span>
         </div>
         <div class="student-actions">
             <button class="btn btn-secondary" onclick="renameStudent()"><i class="ph ph-pencil-simple"></i> تعديل الاسم</button>
@@ -360,7 +370,7 @@
     </div>
 
     <div style="max-width:1100px; margin: 0 auto 15px auto; display:none;" id="groupEvalContainer">
-        <button class="btn" style="color: #ffffff; background-color: var(--group-label-color); width:100%;" onclick="openGroupEvaluation()"><i class="ph ph-plus"></i> تسميع مخصص</button>
+        <button class="btn" style="color: #ffffff; background-color: var(--group-label-color); width:100%;" onclick="openGroupEvaluation()"><i class="ph ph-plus"></i> تسميع مجموعة مخصص</button>
     </div>
 
     <div class="container" id="juzContainer">
@@ -427,7 +437,6 @@
                 </div>
             </div>
 
-            <!-- إضافة تحديد الصفحات ذات الإشكال لقسم السور -->
             <div style="margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
                 <label style="font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                     <input type="checkbox" id="enableProblemPages" onchange="toggleProblemPages()">
@@ -454,9 +463,18 @@
                 <label for="unmemorizedSurahs">سور غير محفوظة:</label>
                 <select id="unmemorizedSurahs" multiple style="height: 100px;"></select>
             </div>
+
+            <div style="margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                <label style="font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="enableJuzProblemSurahs" onchange="toggleJuzProblemSurahs()">
+                    تحديد سور بها إشكال
+                </label>
+                <div id="juzProblemSurahsContainer" style="display: none; margin-top: 8px;">
+                    <select id="juzProblemSurahsSelect" multiple style="height: 90px; width:100%;"></select>
+                </div>
+            </div>
         </div>
 
-        <!-- إضافة خيار تحديد ما إذا كان التسميع سابقاً -->
         <div style="border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 12px; background: var(--history-item-bg);">
             <label style="font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="enablePreviousDate" onchange="togglePreviousDate()">
@@ -487,7 +505,7 @@
 
         <div class="dialog-actions">
             <button class="btn btn-secondary" onclick="closeDialog('evaluationDialog')">إغلاق</button>
-            <button class="btn" onclick="saveEvaluation()">تسجيل المحاولة</button>
+            <button class="btn" id="btnSaveEval" onclick="saveEvaluation()">تسجيل المحاولة</button>
         </div>
 
         <div class="history-section">
@@ -500,12 +518,33 @@
         <h2><i class="ph ph-note-pencil"></i> تسميع مجموعة مخصص</h2>
         <div class="form-group">
             <label for="groupSurahStart">من سورة:</label>
-            <select id="groupSurahStart"></select>
+            <select id="groupSurahStart" onchange="onGroupSurahsRangeChanged()"></select>
         </div>
         <div class="form-group">
             <label for="groupSurahEnd">إلى سورة:</label>
-            <select id="groupSurahEnd"></select>
+            <select id="groupSurahEnd" onchange="onGroupSurahsRangeChanged()"></select>
         </div>
+
+        <div style="border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 12px; background: var(--history-item-bg);">
+            <label style="font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="enableGroupUnmemorized" onchange="toggleGroupUnmemorized()">
+                تحديد سور لم تُحفظْ داخل المجموعة
+            </label>
+            <div id="groupUnmemorizedContainer" style="display: none; margin-top: 8px;" class="form-group">
+                <select id="groupUnmemorizedSelect" multiple style="height: 90px; width: 100%;"></select>
+            </div>
+        </div>
+
+        <div style="border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 12px; background: var(--history-item-bg);">
+            <label style="font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="enableGroupProblemSurahs" onchange="toggleGroupProblemSurahs()">
+                تحديد سور بها إشكال داخل المجموعة
+            </label>
+            <div id="groupProblemSurahsContainer" style="display: none; margin-top: 8px;" class="form-group">
+                <select id="groupProblemSurahsSelect" multiple style="height: 90px; width: 100%;"></select>
+            </div>
+        </div>
+
         <div class="form-group">
             <label for="groupErrorsCount">عدد الأخطاء:</label>
             <input type="number" id="groupErrorsCount" min="0" value="0">
@@ -525,6 +564,11 @@
         <div class="dialog-actions">
             <button class="btn btn-secondary" onclick="closeDialog('groupEvaluationDialog')">إغلاق</button>
             <button class="btn" onclick="saveGroupEvaluation()">تسجيل المجموعة</button>
+        </div>
+
+        <div class="history-section">
+            <h3><i class="ph ph-squares-four"></i> المجموعات التي تم تسميعها:</h3>
+            <div id="groupHistoryList"></div>
         </div>
     </dialog>
 
@@ -554,99 +598,21 @@
         ];
 
         const ajzaSurahsMapping = {
-  1: ["الفاتحة", "البقرة"],
-  2: ["البقرة"],
-  3: ["البقرة", "آل عمران"],
-  4: ["آل عمران", "النساء"],
-  5: ["النساء"],
-  6: ["النساء", "المائدة"],
-  7: ["المائدة", "الأنعام"],
-  8: ["الأنعام", "الأعراف"],
-  9: ["الأعراف", "الأنفال"],
-  10: ["الأنفال", "التوبة"],
-  11: ["التوبة", "يونس", "هود"],
-  12: ["هود", "يوسف"],
-  13: ["يوسف", "الرعد", "إبراهيم"],
-  14: ["الحجر", "النحل"],
-  15: ["الإسراء", "الكهف"],
-  16: ["الكهف", "مريم", "طه"],
-  17: ["الأنبياء", "الحج"],
-  18: ["المؤمنون", "النور", "الفرقان"],
-  19: ["الفرقان", "الشعراء", "النمل"],
-  20: ["النمل", "القصص", "العنكبوت"],
-  21: ["العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب"],
-  22: ["الأحزاب", "سبأ", "فاطر", "يس"],
-  23: ["يس", "الصافات", "ص", "الزمر"],
-  24: ["الزمر", "غافر", "فصلت"],
-  25: ["فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية"],
-  26: ["الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات"],
-  27: ["الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد"],
-  28: ["المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"],
-  29: ["الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"],
-  30: ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
-};
+          1: ["الفاتحة", "البقرة"], 2: ["البقرة"], 3: ["البقرة", "آل عمران"], 4: ["آل عمران", "النساء"], 5: ["النساء"],
+          6: ["النساء", "المائدة"], 7: ["المائدة", "الأنعام"], 8: ["الأنعام", "الأعراف"], 9: ["الأعراف", "الأنفال"], 10: ["الأنفال", "التوبة"],
+          11: ["التوبة", "يونس", "هود"], 12: ["هود", "يوسف"], 13: ["يوسف", "الرعد", "إبراهيم"], 14: ["الحجر", "النحل"], 15: ["الإسراء", "الكهف"],
+          16: ["الكهف", "مريم", "طه"], 17: ["الأنبياء", "الحج"], 18: ["المؤمنون", "النور", "الفرقان"], 19: ["الفرقان", "الشعراء", "النمل"], 20: ["النمل", "القصص", "العنكبوت"],
+          21: ["العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب"], 22: ["الأحزاب", "سبأ", "فاطر", "يس"], 23: ["يس", "الصافات", "ص", "الزمر"], 24: ["الزمر", "غافر", "فصلت"], 25: ["فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية"],
+          26: ["الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات"], 27: ["الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد"], 28: ["المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"], 29: ["الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"], 30: ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
+        };
 
         const ahzabSurahsMapping = {
-  "1": ["الفاتحة", "البقرة"],
-  "2": ["البقرة"],
-  "3": ["البقرة"],
-  "4": ["البقرة"],
-  "5": ["البقرة", "آل عمران"],
-  "6": ["آل عمران"],
-  "7": ["آل عمران", "النساء"],
-  "8": ["النساء"],
-  "9": ["النساء"],
-  "10": ["النساء", "المائدة"],
-  "11": ["المائدة"],
-  "12": ["المائدة", "الأنعام"],
-  "13": ["الأنعام"],
-  "14": ["الأنعام"],
-  "15": ["الأنعام", "الأعراف"],
-  "16": ["الأعراف"],
-  "17": ["الأعراف"],
-  "18": ["الأعراف", "الأنفال"],
-  "19": ["الأنفال", "التوبة"],
-  "20": ["التوبة"],
-  "21": ["التوبة", "يونس"],
-  "22": ["يونس", "هود"],
-  "23": ["هود"],
-  "24": ["هود", "يوسف"],
-  "25": ["يوسف", "الرعد"],
-  "26": ["الرعد", "إبراهيم"],
-  "27": ["الحجر", "النحل"],
-  "28": ["النحل", "الإسراء"],
-  "29": ["الإسراء"],
-  "30": ["الإسراء", "الكهف"],
-  "31": ["الكهف", "مريم"],
-  "32": ["طه"],
-  "33": ["الأنبياء"],
-  "34": ["الحج"],
-  "35": ["المؤمنون"],
-  "36": ["النور", "الفرقان"],
-  "37": ["الفرقان", "الشعراء"],
-  "38": ["الشعراء", "النمل"],
-  "39": ["النمل", "القصص"],
-  "40": ["القصص", "العنكبوت"],
-  "41": ["العنكبوت", "الروم", "لقمان"],
-  "42": ["لقمان", "السجدة", "الأحزاب"],
-  "43": ["الأحزاب", "سبأ"],
-  "44": ["سبأ", "فاطر", "يس"],
-  "45": ["يس", "الصافات"],
-  "46": ["الصافات", "ص", "الزمر"],
-  "47": ["الزمر", "غافر"],
-  "48": ["غافر", "فصلت"],
-  "49": ["فصلت", "الشورى", "الزخرف"],
-  "50": ["الزخرف", "الدخان", "الجاثية"],
-  "51": ["الأحقاف", "محمد", "الفتح"],
-  "52": ["الفتح", "الحجرات", "ق", "الذاريات"],
-  "53": ["الذاريات", "الطور", "النجم", "القمر"],
-  "54": ["الرحمن", "الواقعة", "الحديد"],
-  "55": ["المجادلة", "الحشر", "الممتحنة", "الصف"],
-  "56": ["الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"],
-  "57": ["الملك", "القلم", "الحاقة", "المعارج", "نوح"],
-  "58": ["الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"],
-  "59": ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق"],
-  "60": ["الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
+          "1": ["الفاتحة", "البقرة"], "2": ["البقرة"], "3": ["البقرة"], "4": ["البقرة"], "5": ["البقرة", "آل عمران"], "6": ["آل عمران"], "7": ["آل عمران", "النساء"], "8": ["النساء"], "9": ["النساء"], "10": ["النساء", "المائدة"],
+          "11": ["المائدة"], "12": ["المائدة", "الأنعام"], "13": ["الأنعام"], "14": ["الأنعام"], "15": ["الأنعام", "الأعراف"], "16": ["الأعراف"], "17": ["الأعراف"], "18": ["الأعراف", "الأنفال"], "19": ["الأنفال", "التوبة"], "20": ["التوبة"],
+          "21": ["التوبة", "يونس"], "22": ["يونس", "هود"], "23": ["هود"], "24": ["هود", "يوسف"], "25": ["يوسف", "الرعد"], "26": ["الرعد", "إبراهيم"], "27": ["الحجر", "النحل"], "28": ["النحل", "الإسراء"], "29": ["الإسراء"], "30": ["الإسراء", "الكهف"],
+          "31": ["الكهف", "مريم"], "32": ["طه"], "33": ["الأنبياء"], "34": ["الحج"], "35": ["المؤمنون"], "36": ["النور", "الفرقان"], "37": ["الفرقان", "الشعراء"], "38": ["الشعراء", "النمل"], "39": ["النمل", "القصص"], "40": ["القصص", "العنكبوت"],
+          "41": ["العنكبوت", "الروم", "لقمان"], "42": ["لقمان", "السجدة", "الأحزاب"], "43": ["الأحزاب", "سبأ"], "44": ["سبأ", "فاطر", "يس"], "45": ["يس", "الصافات"], "46": ["الصافات", "ص", "الزمر"], "47": ["الزمر", "غافر"], "48": ["غافر", "فصلت"], "49": ["فصلت", "الشورى", "الزخرف"], "50": ["الزخرف", "الدخان", "الجاثية"],
+          "51": ["الأحقاف", "محمد", "الفتح"], "52": ["الفتح", "الحجرات", "ق", "الذاريات"], "53": ["الذاريات", "الطور", "النجم", "القمر"], "54": ["الرحمن", "الواقعة", "الحديد"], "55": ["المجادلة", "الحشر", "الممتحنة", "الصف"], "56": ["الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"], "57": ["الملك", "القلم", "الحاقة", "المعارج", "نوح"], "58": ["الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"], "59": ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق"], "60": ["الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
         };
 
         let settings = { errorDeduction: 1.0, doubtDeduction: 1.0, tajweedDeduction: 0.25, confidenceDeduction: 5 };
@@ -657,6 +623,7 @@
         let sortOrder = 'asc';
         let currentSelectedTab = 'ajza';
         let currentSelectedIndex = 1;
+        let editingAttemptIndex = null;
 
         window.onload = function() {
             initTheme();
@@ -862,6 +829,9 @@
             const select = document.getElementById('studentSelect');
             select.innerHTML = '';
             const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
+            
+            document.getElementById('studentsCountBadge').innerText = `العدد: ${filteredStudents.length}`;
+
             filteredStudents.forEach(student => {
                 const opt = document.createElement('option');
                 opt.value = student.id;
@@ -1090,6 +1060,7 @@
                 let versesScopeHTML = ''; 
                 let unmemorizedHTML = ''; 
                 let problemPagesHTML = '';
+                let problemSurahsHTML = '';
                 
                 if (targetData[i] && targetData[i].length > 0) {
                     const attempts = targetData[i];
@@ -1108,6 +1079,10 @@
                         unmemorizedHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 13px; margin-top: 2px;">بإستثناء: ${lastAttempt.unmemorizedSurahs.join('، ')} (لم يحفظ)</div>`;
                     }
 
+                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
+                        problemSurahsHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">سور بها إشكال: ${lastAttempt.problemSurahs.join('، ')}</div>`;
+                    }
+
                     let badgeClass = '';
                     let statusText = '';
                     let confidenceSectionHTML = '';
@@ -1117,7 +1092,16 @@
                         badgeClass = 'status-group-label';
                         borderClass = 'border-group-label';
                         statusText = lastAttempt.groupRangeText;
-                        confidenceSectionHTML = `<div class="confidence-level" style="color: #27ae60;"><i class="ph ph-shield-check"></i> مستوى الثقة للمجموعة : 100%</div>`;
+                        
+                        let groupAddons = "";
+                        if (lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
+                            groupAddons += `<div style="color: var(--danger-color); font-weight: bold; font-size: 11px;">لم تُحفظ: ${lastAttempt.unmemorizedSurahs.join('، ')}</div>`;
+                        }
+                        if (lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
+                            groupAddons += `<div style="color: var(--warning-color); font-weight: bold; font-size: 11px;">إشكال: ${lastAttempt.problemSurahs.join('، ')}</div>`;
+                        }
+
+                        confidenceSectionHTML = `<div class="confidence-level" style="color: #27ae60;"><i class="ph ph-shield-check"></i> تسميع مجموعة</div>${groupAddons}`;
                         progressHTML = '';
                     } else {
                         const hesitations = lastAttempt.hesitations || 0;
@@ -1153,6 +1137,7 @@
                         ${versesScopeHTML}
                         ${problemPagesHTML}
                         ${unmemorizedHTML}
+                        ${problemSurahsHTML}
                         ${confidenceSectionHTML}
                         ${progressHTML}
                     `;
@@ -1175,7 +1160,6 @@
         function openSettings() { document.getElementById('settingsDialog').showModal(); }
         function closeDialog(id) { document.getElementById(id).close(); }
 
-        /* وظائف التحكم بميزات إشكال الصفحات وتاريخ التسميع */
         function toggleProblemPages() {
             const enabled = document.getElementById('enableProblemPages').checked;
             const container = document.getElementById('problemPagesContainer');
@@ -1185,22 +1169,37 @@
             }
         }
 
-        function addProblemPageField() {
+        function addProblemPageField(pageVal = '') {
             const list = document.getElementById('problemPagesList');
             const div = document.createElement('div');
             div.className = 'page-input-row';
             div.innerHTML = `
-                <input type="number" class="problem-page-input" min="1" max="604" placeholder="رقم الصفحة" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color); font-size:13px; background:var(--bg-color); color:var(--text-color);">
+                <input type="number" class="problem-page-input" min="1" max="604" value="${pageVal}" placeholder="رقم الصفحة" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color); font-size:13px; background:var(--bg-color); color:var(--text-color);">
                 <button type="button" class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; min-width: auto; flex: 0;" onclick="this.parentElement.remove()"><i class="ph ph-trash"></i></button>
             `;
             list.appendChild(div);
+        }
+
+        function toggleJuzProblemSurahs() {
+            const enabled = document.getElementById('enableJuzProblemSurahs').checked;
+            document.getElementById('juzProblemSurahsContainer').style.display = enabled ? 'block' : 'none';
+        }
+
+        function toggleGroupUnmemorized() {
+            const enabled = document.getElementById('enableGroupUnmemorized').checked;
+            document.getElementById('groupUnmemorizedContainer').style.display = enabled ? 'block' : 'none';
+        }
+
+        function toggleGroupProblemSurahs() {
+            const enabled = document.getElementById('enableGroupProblemSurahs').checked;
+            document.getElementById('groupProblemSurahsContainer').style.display = enabled ? 'block' : 'none';
         }
 
         function togglePreviousDate() {
             const enabled = document.getElementById('enablePreviousDate').checked;
             const block = document.getElementById('previousDateBlock');
             block.style.display = enabled ? 'block' : 'none';
-            if (enabled) {
+            if (enabled && !document.getElementById('customEvalDate').value) {
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('customEvalDate').value = today;
             }
@@ -1208,6 +1207,9 @@
 
         function openEvaluation(index) {
             currentSelectedIndex = index;
+            editingAttemptIndex = null;
+            document.getElementById('btnSaveEval').innerText = "تسجيل المحاولة";
+
             let namesArray, prefixLabel;
 
             if (currentSelectedTab === 'ahzab') { namesArray = juzNames; prefixLabel = "تسميع حزب"; }
@@ -1219,10 +1221,12 @@
             const versesBlock = document.getElementById('surahVersesBlock');
             const juzAhzabBlock = document.getElementById('juzAhzabScopeBlock');
             
-            // إعادة ضبط الحقول الإضافية
             document.getElementById('enableProblemPages').checked = false;
             document.getElementById('problemPagesContainer').style.display = 'none';
             document.getElementById('problemPagesList').innerHTML = '';
+
+            document.getElementById('enableJuzProblemSurahs').checked = false;
+            document.getElementById('juzProblemSurahsContainer').style.display = 'none';
 
             document.getElementById('enablePreviousDate').checked = false;
             document.getElementById('previousDateBlock').style.display = 'none';
@@ -1241,6 +1245,7 @@
                 document.getElementById('juzAhzabScopeType').value = 'all';
                 document.getElementById('unmemorizedSurahsPicker').style.display = 'none';
                 setupUnmemorizedSurahsDropdown(index);
+                setupJuzProblemSurahsDropdown(index);
             }
 
             document.getElementById('errorsCount').value = 0;
@@ -1252,6 +1257,60 @@
             document.getElementById('evaluationDialog').showModal();
         }
 
+        function editSpecificAttempt(itemIndex, attemptArrayId) {
+            const student = getCurrentStudentData();
+            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
+            
+            const attempt = targetData[itemIndex][attemptArrayId];
+            if (!attempt) return;
+
+            editingAttemptIndex = attemptArrayId;
+            document.getElementById('btnSaveEval').innerText = "حفظ التعديلات";
+
+            document.getElementById('errorsCount').value = attempt.errors || 0;
+            document.getElementById('doubtsCount').value = attempt.doubts || 0;
+            document.getElementById('hesitationsCount').value = attempt.hesitations || 0;
+            document.getElementById('tajweedCount').value = attempt.tajweedErrors || 0;
+
+            if (currentSelectedTab === 'suwar') {
+                document.getElementById('surahScopeType').value = attempt.scopeType || 'all';
+                onSurahScopeTypeChanged();
+                if (attempt.scopeType === 'verses') {
+                    document.getElementById('verseStart').value = attempt.verseStart || 1;
+                    onVerseStartChanged();
+                    document.getElementById('verseEnd').value = attempt.verseEnd || 1;
+                }
+                if (attempt.problemPages && attempt.problemPages.length > 0) {
+                    document.getElementById('enableProblemPages').checked = true;
+                    toggleProblemPages();
+                    document.getElementById('problemPagesList').innerHTML = '';
+                    attempt.problemPages.forEach(p => addProblemPageField(p));
+                }
+            } else {
+                document.getElementById('juzAhzabScopeType').value = attempt.scopeType || 'all';
+                onJuzAhzabScopeTypeChanged();
+                if (attempt.scopeType === 'unmemorized' && attempt.unmemorizedSurahs) {
+                    const multi = document.getElementById('unmemorizedSurahs');
+                    Array.from(multi.options).forEach(opt => {
+                        opt.selected = attempt.unmemorizedSurahs.includes(opt.value);
+                    });
+                }
+                if (attempt.problemSurahs && attempt.problemSurahs.length > 0) {
+                    document.getElementById('enableJuzProblemSurahs').checked = true;
+                    toggleJuzProblemSurahs();
+                    const multiProb = document.getElementById('juzProblemSurahsSelect');
+                    Array.from(multiProb.options).forEach(opt => {
+                        opt.selected = attempt.problemSurahs.includes(opt.value);
+                    });
+                }
+            }
+
+            if (attempt.date) {
+                document.getElementById('enablePreviousDate').checked = true;
+                togglePreviousDate();
+            }
+        }
+
         function openGroupEvaluation() {
             if (!currentStudentId || studentsList.length === 0) {
                 alert("يرجى اختيار طالب أولاً.");
@@ -1261,6 +1320,15 @@
             document.getElementById('groupDoubtsCount').value = 0;
             document.getElementById('groupHesitationsCount').value = 0;
             document.getElementById('groupTajweedCount').value = 0;
+
+            document.getElementById('enableGroupUnmemorized').checked = false;
+            document.getElementById('groupUnmemorizedContainer').style.display = 'none';
+
+            document.getElementById('enableGroupProblemSurahs').checked = false;
+            document.getElementById('groupProblemSurahsContainer').style.display = 'none';
+
+            onGroupSurahsRangeChanged();
+            renderGroupHistory();
             document.getElementById('groupEvaluationDialog').showModal();
         }
 
@@ -1282,6 +1350,28 @@
             });
         }
 
+        function onGroupSurahsRangeChanged() {
+            const startIdx = parseInt(document.getElementById('groupSurahStart').value) || 1;
+            const endIdx = parseInt(document.getElementById('groupSurahEnd').value) || 1;
+            const range = getSurahRangeArray(startIdx, endIdx);
+
+            const unmemSelect = document.getElementById('groupUnmemorizedSelect');
+            const probSelect = document.getElementById('groupProblemSurahsSelect');
+            unmemSelect.innerHTML = '';
+            probSelect.innerHTML = '';
+
+            range.forEach(sIdx => {
+                const name = surahNames[sIdx - 1];
+                const opt1 = document.createElement('option');
+                opt1.value = name; opt1.innerText = name;
+                unmemSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = name; opt2.innerText = name;
+                probSelect.appendChild(opt2);
+            });
+        }
+
         function setupVersesDropdowns(surahIndex) {
             const totalVerses = surahVersesCount[surahIndex - 1];
             const startSelect = document.getElementById('verseStart');
@@ -1299,14 +1389,21 @@
         function setupUnmemorizedSurahsDropdown(index) {
             const multiSelect = document.getElementById('unmemorizedSurahs');
             multiSelect.innerHTML = '';
-            let relevantSurahs = [];
+            let relevantSurahs = (currentSelectedTab === 'ajza') ? (ajzaSurahsMapping[index] || []) : (ahzabSurahsMapping[index] || []);
             
-            if (currentSelectedTab === 'ajza') {
-                relevantSurahs = ajzaSurahsMapping[index] || [];
-            } else if (currentSelectedTab === 'ahzab') {
-                relevantSurahs = ahzabSurahsMapping[index] || [];
-            }
-            
+            relevantSurahs.forEach(surah => {
+                const opt = document.createElement('option');
+                opt.value = surah;
+                opt.innerText = surah;
+                multiSelect.appendChild(opt);
+            });
+        }
+
+        function setupJuzProblemSurahsDropdown(index) {
+            const multiSelect = document.getElementById('juzProblemSurahsSelect');
+            multiSelect.innerHTML = '';
+            let relevantSurahs = (currentSelectedTab === 'ajza') ? (ajzaSurahsMapping[index] || []) : (ahzabSurahsMapping[index] || []);
+
             relevantSurahs.forEach(surah => {
                 const opt = document.createElement('option');
                 opt.value = surah;
@@ -1318,21 +1415,13 @@
         function onSurahScopeTypeChanged() {
             const type = document.getElementById('surahScopeType').value;
             const pickers = document.getElementById('versesPickers');
-            if (type === 'verses') {
-                pickers.style.display = 'flex';
-            } else {
-                pickers.style.display = 'none';
-            }
+            pickers.style.display = (type === 'verses') ? 'flex' : 'none';
         }
 
         function onJuzAhzabScopeTypeChanged() {
             const type = document.getElementById('juzAhzabScopeType').value;
             const picker = document.getElementById('unmemorizedSurahsPicker');
-            if (type === 'unmemorized') {
-                picker.style.display = 'flex';
-            } else {
-                picker.style.display = 'none';
-            }
+            picker.style.display = (type === 'unmemorized') ? 'flex' : 'none';
         }
 
         function onVerseStartChanged() {
@@ -1374,15 +1463,10 @@
             if (!student.surahData) student.surahData = {};
             if (!student.ajzaData) student.ajzaData = {};
 
-            let targetData;
-            if (currentSelectedTab === 'ahzab') targetData = student.data;
-            else if (currentSelectedTab === 'suwar') targetData = student.surahData;
-            else targetData = student.ajzaData;
+            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
 
             if (!targetData[currentSelectedIndex]) targetData[currentSelectedIndex] = [];
-            const actualAttemptNumber = targetData[currentSelectedIndex].length + 1;
 
-            // تحديد تاريخ المحاولة
             let evalDate = new Date().toLocaleDateString('ar-EG');
             if (document.getElementById('enablePreviousDate').checked) {
                 const customVal = document.getElementById('customEvalDate').value;
@@ -1392,50 +1476,77 @@
                 }
             }
 
-            const attempt = {
-                attemptNumber: actualAttemptNumber,
-                date: evalDate,
-                errors: errors,
-                doubts: doubts,
-                hesitations: hesitations,
-                tajweedErrors: tajweedErrors,
-                score: finalScore
-            };
+            let currentAttemptData = (editingAttemptIndex !== null) ? targetData[currentSelectedIndex][editingAttemptIndex] : null;
 
-            if (currentSelectedTab === 'suwar') {
-                const scopeType = document.getElementById('surahScopeType').value;
-                attempt.scopeType = scopeType;
-                if (scopeType === 'verses') {
-                    attempt.verseStart = parseInt(document.getElementById('verseStart').value);
-                    attempt.verseEnd = parseInt(document.getElementById('verseEnd').value);
-                }
+            // إذا كان التعديل يتم على مجموعة كاملة
+            if (editingAttemptIndex !== null && currentAttemptData && currentAttemptData.isGroup) {
+                const groupIdToUpdate = currentAttemptData.groupIdentifier;
+                let rangeSurahs = getSurahRangeArray(currentAttemptData.startSurahIdx, currentAttemptData.endSurahIdx);
 
-                // حفظ الصفحات التي بها مشكلة إن وجدت
-                if (document.getElementById('enableProblemPages').checked) {
-                    const pageInputs = document.querySelectorAll('.problem-page-input');
-                    const pages = [];
-                    pageInputs.forEach(input => {
-                        const val = parseInt(input.value);
-                        if (val && !isNaN(val)) pages.push(val);
-                    });
-                    if (pages.length > 0) {
-                        attempt.problemPages = pages;
+                rangeSurahs.forEach(sIdx => {
+                    if (student.surahData[sIdx]) {
+                        student.surahData[sIdx].forEach(att => {
+                            if (att.isGroup && (att.groupIdentifier === groupIdToUpdate || (groupIdToUpdate === undefined && att.date === currentAttemptData.date && att.groupRangeText === currentAttemptData.groupRangeText))) {
+                                att.errors = errors;
+                                att.doubts = doubts;
+                                att.hesitations = hesitations;
+                                att.tajweedErrors = tajweedErrors;
+                                att.score = finalScore;
+                                att.date = evalDate;
+                            }
+                        });
+                    }
+                });
+            } else {
+                let attempt = {
+                    attemptNumber: (editingAttemptIndex !== null) ? (editingAttemptIndex + 1) : (targetData[currentSelectedIndex].length + 1),
+                    date: evalDate,
+                    errors: errors,
+                    doubts: doubts,
+                    hesitations: hesitations,
+                    tajweedErrors: tajweedErrors,
+                    score: finalScore
+                };
+
+                if (currentSelectedTab === 'suwar') {
+                    const scopeType = document.getElementById('surahScopeType').value;
+                    attempt.scopeType = scopeType;
+                    if (scopeType === 'verses') {
+                        attempt.verseStart = parseInt(document.getElementById('verseStart').value);
+                        attempt.verseEnd = parseInt(document.getElementById('verseEnd').value);
+                    }
+
+                    if (document.getElementById('enableProblemPages').checked) {
+                        const pageInputs = document.querySelectorAll('.problem-page-input');
+                        const pages = [];
+                        pageInputs.forEach(input => {
+                            const val = parseInt(input.value);
+                            if (val && !isNaN(val)) pages.push(val);
+                        });
+                        if (pages.length > 0) attempt.problemPages = pages;
+                    }
+                } 
+                else if (currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') {
+                    const scopeType = document.getElementById('juzAhzabScopeType').value;
+                    attempt.scopeType = scopeType;
+                    if (scopeType === 'unmemorized') {
+                        const multiSelect = document.getElementById('unmemorizedSurahs');
+                        attempt.unmemorizedSurahs = Array.from(multiSelect.selectedOptions).map(option => option.value);
+                    }
+                    if (document.getElementById('enableJuzProblemSurahs').checked) {
+                        const multiProb = document.getElementById('juzProblemSurahsSelect');
+                        attempt.problemSurahs = Array.from(multiProb.selectedOptions).map(option => option.value);
                     }
                 }
-            } 
-            else if (currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') {
-                const scopeType = document.getElementById('juzAhzabScopeType').value;
-                attempt.scopeType = scopeType;
-                if (scopeType === 'unmemorized') {
-                    const multiSelect = document.getElementById('unmemorizedSurahs');
-                    const selectedSurahs = Array.from(multiSelect.selectedOptions).map(option => option.value);
-                    attempt.unmemorizedSurahs = selectedSurahs;
+
+                if (editingAttemptIndex !== null) {
+                    targetData[currentSelectedIndex][editingAttemptIndex] = attempt;
+                } else {
+                    targetData[currentSelectedIndex].push(attempt);
                 }
             }
 
-            targetData[currentSelectedIndex].push(attempt);
             saveStudentsToStorage();
-
             renderList();
             displayHistory(currentSelectedIndex);
             closeDialog('evaluationDialog');
@@ -1466,6 +1577,21 @@
 
             let rangeSurahs = getSurahRangeArray(startIdx, endIdx);
 
+            let unmemorizedSurahs = [];
+            if (document.getElementById('enableGroupUnmemorized').checked) {
+                const multiUnmem = document.getElementById('groupUnmemorizedSelect');
+                unmemorizedSurahs = Array.from(multiUnmem.selectedOptions).map(opt => opt.value);
+            }
+
+            let problemSurahs = [];
+            if (document.getElementById('enableGroupProblemSurahs').checked) {
+                const multiProb = document.getElementById('groupProblemSurahsSelect');
+                problemSurahs = Array.from(multiProb.selectedOptions).map(opt => opt.value);
+            }
+
+            // توليد معرّف فريد ومستقل تماماً لكل عملية تسميع مجموعة
+            const groupIdentifier = 'grp_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+
             rangeSurahs.forEach(sIdx => {
                 if (!student.surahData[sIdx]) student.surahData[sIdx] = [];
                 const actualAttemptNumber = student.surahData[sIdx].length + 1;
@@ -1479,9 +1605,12 @@
                     tajweedErrors: tajweedErrors,
                     score: finalScore,
                     isGroup: true,
+                    groupIdentifier: groupIdentifier,
                     groupRangeText: `${startName} - ${endName}`,
                     startSurahIdx: startIdx,
-                    endSurahIdx: endIdx
+                    endSurahIdx: endIdx,
+                    unmemorizedSurahs: unmemorizedSurahs,
+                    problemSurahs: problemSurahs
                 };
 
                 student.surahData[sIdx].push(attempt);
@@ -1493,15 +1622,95 @@
             sendDataToSketchware("EVALUATION_SAVED");
         }
 
+        function renderGroupHistory() {
+            const listContainer = document.getElementById('groupHistoryList');
+            listContainer.innerHTML = '';
+            
+            const student = getCurrentStudentData();
+            if (!student.surahData) {
+                listContainer.innerHTML = '<p style="color:#aaa; font-size:13px;">لا توجد مجموعات مُسمّعة.</p>';
+                return;
+            }
+
+            let groupsMap = {};
+            Object.keys(student.surahData).forEach(sIdx => {
+                const attempts = student.surahData[sIdx];
+                attempts.forEach((att) => {
+                    if (att.isGroup) {
+                        const key = att.groupIdentifier || `${att.groupRangeText}_${att.date}_${att.score}`;
+                        if (!groupsMap[key]) {
+                            groupsMap[key] = {
+                                groupIdentifier: att.groupIdentifier || null,
+                                groupRangeText: att.groupRangeText,
+                                date: att.date,
+                                score: att.score,
+                                startSurahIdx: att.startSurahIdx,
+                                endSurahIdx: att.endSurahIdx
+                            };
+                        }
+                    }
+                });
+            });
+
+            const keys = Object.keys(groupsMap);
+            if (keys.length === 0) {
+                listContainer.innerHTML = '<p style="color:#aaa; font-size:13px;">لا توجد مجموعات مُسمّعة حالياً.</p>';
+                return;
+            }
+
+            keys.forEach(key => {
+                const grp = groupsMap[key];
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const gId = grp.groupIdentifier ? `'${grp.groupIdentifier}'` : 'null';
+                
+                item.innerHTML = `
+                    <div>
+                        <strong style="color:var(--group-label-color);">${grp.groupRangeText}</strong>
+                        <small style="opacity:0.7"> (${grp.date})</small><br>
+                        <span style="font-size:12px;">الدرجة: ${grp.score}/10</span>
+                    </div>
+                    <button class="btn btn-danger" style="padding:4px 8px; font-size:12px; flex:0;" onclick="deleteGroupAttempt(${gId}, '${grp.startSurahIdx}', '${grp.endSurahIdx}', '${grp.date}', '${grp.groupRangeText}')"><i class="ph ph-trash"></i> حذف المجموعة</button>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function deleteGroupAttempt(groupIdentifier, startIdx, endIdx, date, groupRangeText) {
+            if (!confirm("هل أنت متأكد من حذف هذه المجموعة المسمعة بالكامل؟")) return;
+            const student = getCurrentStudentData();
+            const range = getSurahRangeArray(parseInt(startIdx), parseInt(endIdx));
+
+            range.forEach(sIdx => {
+                if (student.surahData[sIdx]) {
+                    student.surahData[sIdx] = student.surahData[sIdx].filter(att => {
+                        if (!att.isGroup) return true;
+                        if (groupIdentifier && att.groupIdentifier) {
+                            return att.groupIdentifier !== groupIdentifier;
+                        }
+                        return !(att.date === date && att.groupRangeText === groupRangeText);
+                    });
+                    
+                    student.surahData[sIdx].forEach((attempt, newIdx) => {
+                        attempt.attemptNumber = newIdx + 1;
+                    });
+                    
+                    if (student.surahData[sIdx].length === 0) delete student.surahData[sIdx];
+                }
+            });
+
+            saveStudentsToStorage();
+            renderList();
+            renderGroupHistory();
+        }
+
         function displayHistory(index) {
             const historyList = document.getElementById('historyList');
             historyList.innerHTML = '';
             
             const student = getCurrentStudentData();
-            let targetData;
-            if (currentSelectedTab === 'ahzab') targetData = student.data;
-            else if (currentSelectedTab === 'suwar') targetData = student.surahData;
-            else targetData = student.ajzaData;
+            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
 
             if (!targetData[index] || targetData[index].length === 0) {
                 historyList.innerHTML = '<p style="color:#aaa; font-size:14px;">لا توجد محاولات مسجلة سابقاً.</p>';
@@ -1519,7 +1728,6 @@
                 if (attempt.attemptNumber === 1) numText = "المرة الأولى";
                 else if (attempt.attemptNumber === 2) numText = "المرة الثانية";
                 else if (attempt.attemptNumber === 3) numText = "المرة الثالثة";
-                else if (attempt.attemptNumber === 4) numText = "المرة الرابعة";
 
                 const originalIndex = attempt.attemptNumber - 1;
                 const tajweedVal = attempt.tajweedErrors !== undefined ? attempt.tajweedErrors : 0;
@@ -1529,11 +1737,7 @@
                 let scoreTextDisplay = `${attempt.score}/10`;
 
                 let score = attempt.score;
-                let statusText = '';
-                if (score > 7.5) statusText = 'ممتاز';
-                else if (score > 5.0) statusText = 'جيد جداً';
-                else if (score > 2.5) statusText = 'جيد';
-                else statusText = 'ضعيف';
+                let statusText = (score > 7.5) ? 'ممتاز' : ((score > 5.0) ? 'جيد جداً' : ((score > 2.5) ? 'جيد' : 'ضعيف'));
 
                 if (currentSelectedTab === 'suwar' && attempt.isGroup) {
                     isGroupStyle = `style="color: var(--group-label-color);"`;
@@ -1551,6 +1755,10 @@
                     if (currentSelectedTab === 'suwar' && attempt.problemPages && attempt.problemPages.length > 0) {
                         scopeText += ` | صفحات بإشكال: ${attempt.problemPages.join('، ')}`;
                     }
+
+                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && attempt.problemSurahs && attempt.problemSurahs.length > 0) {
+                        scopeText += ` | سور بإشكال: ${attempt.problemSurahs.join('، ')}`;
+                    }
                 }
 
                 item.innerHTML = `
@@ -1560,12 +1768,14 @@
                             الأخطاء: ${attempt.errors} | الترددات: ${attempt.hesitations} | الشكوك: ${attempt.doubts} | التجويد: ${tajweedVal}${scopeText}
                         </span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div style="font-weight:bold; font-size:16px; color: var(--accent-color);">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="font-weight:bold; font-size:15px; color: var(--accent-color);">
                             ${scoreTextDisplay}
                         </div>
+                        <button class="btn btn-warning" style="padding: 2px 6px; font-size: 11px; border-radius: 4px;" 
+                                onclick="editSpecificAttempt(${index}, ${originalIndex})" title="تعديل"><i class="ph ph-pencil-simple"></i></button>
                         <button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; border-radius: 4px;" 
-                                onclick="deleteSpecificAttempt(${index}, ${originalIndex})"><i class="ph ph-trash"></i></button>
+                                onclick="deleteSpecificAttempt(${index}, ${originalIndex})" title="حذف"><i class="ph ph-trash"></i></button>
                     </div>
                 `;
                 historyList.appendChild(item);
@@ -1573,24 +1783,27 @@
         }
 
         function deleteSpecificAttempt(itemIndex, attemptArrayId) {
-            if (!confirm("هل أنت متأكد من حذف هذه المحاولة المحددة?")) return;
-
             const student = studentsList.find(s => s.id === currentStudentId);
-            let targetData;
-            if (currentSelectedTab === 'ahzab') targetData = student.data;
-            else if (currentSelectedTab === 'suwar') targetData = student.surahData;
-            else targetData = student.ajzaData;
+            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
 
-            if (targetData[itemIndex]) {
+            if (targetData[itemIndex] && targetData[itemIndex][attemptArrayId]) {
+                const targetAttempt = targetData[itemIndex][attemptArrayId];
+                
+                // منع حذف سورة مفردة إذا كانت السورة محتواتة ضمن مجموعة
+                if (currentSelectedTab === 'suwar' && targetAttempt.isGroup) {
+                    alert("هذا السجل تابع لتسميع مجموعة مخصص. لحذفه، يرجى الاستعانة بخيار حذف المجموعة من شاشة (تسميع مجموعة مخصص).");
+                    return;
+                }
+
+                if (!confirm("هل أنت متأكد من حذف هذه المحاولة المحددة؟")) return;
+
                 targetData[itemIndex].splice(attemptArrayId, 1);
 
                 targetData[itemIndex].forEach((attempt, newIdx) => {
                     attempt.attemptNumber = newIdx + 1;
                 });
 
-                if (targetData[itemIndex].length === 0) {
-                    delete targetData[itemIndex];
-                }
+                if (targetData[itemIndex].length === 0) delete targetData[itemIndex];
 
                 saveStudentsToStorage();
                 renderList();
@@ -1616,7 +1829,7 @@
         function deleteStudent() {
             if (!currentStudentId) return;
             const student = studentsList.find(s => s.id === currentStudentId);
-            if (!confirm(`هل أنت متأكد من حذف الطالب (${student.name}) وجميع سجلات تسميعه بشكل نهائي?`)) return;
+            if (!confirm(`هل أنت متأكد من حذف الطالب (${student.name}) وجميع سجلات تسميعه بشكل نهائي؟`)) return;
             
             studentsList = studentsList.filter(s => s.id !== currentStudentId);
             
@@ -1648,11 +1861,7 @@
             sendDataToSketchware("DATA_EXPORTED");
         }
 
-        document.getElementById('juzContainer').addEventListener('click', function(){});
-
-        function triggerImport() {
-            document.getElementById('importFileInput').click();
-        }
+        function triggerImport() { document.getElementById('importFileInput').click(); }
 
         function importData(event) {
             const file = event.target.files[0];
@@ -1662,9 +1871,8 @@
             reader.onload = function(e) {
                 try {
                     const importedData = JSON.parse(e.target.result);
-                    
                     if (importedData.students) {
-                        if (confirm("هل أنت متأكد من استيراد هذه النسخة? سيتم استبدال جميع بيانات الحلقات والطلاب الحالية بالأحزاب والسور والأجزاء.")) {
+                        if (confirm("هل أنت متأكد من استيراد هذه النسخة؟ سيتم استبدال جميع بيانات الحلقات والطلاب الحالية بالأحزاب والسور والأجزاء.")) {
                             if (importedData.groups) localStorage.setItem('quran_groups_list', importedData.groups);
                             if (importedData.currentGroupId) localStorage.setItem('quran_current_group_id', importedData.currentGroupId);
                             localStorage.setItem('quran_students_list', importedData.students);
