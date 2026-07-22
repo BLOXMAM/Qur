@@ -387,12 +387,10 @@
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
 <h3><i class="ph ph-github-logo"></i> قاعدة البيانات عبر GitHub</h3>
 <div class="form-group">
-    <label for="githubToken">رمز الوصول Personal Access Token (GitHub):</label> <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    <label for="githubToken">رمز الوصول Personal Access Token (GitHub):</label> 
+    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    <small style="color: #64748b; font-size: 12px; margin-top: 4px;">* المزامنة تتم تلقائياً وفورياً في الخلفية، لا حاجة لأي أزرار.</small>
 </div>
-<div class="dialog-actions" style="margin-top: 10px; justify-content: flex-start;">
-    <button type="button" class="btn btn-info" onclick="syncWithGitHub()"><i class="ph ph-arrows-clockwise"></i> مزامنة الآن مع GitHub</button>
-</div>
-<div id="githubSyncStatus" style="font-size: 13px; margin-top: 5px; font-weight: bold;"></div>
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
         <h3><i class="ph ph-users-three"></i> إدارة الحلقات</h3>
         
@@ -1702,62 +1700,19 @@ const GITHUB_OWNER = "BLOXMAM";
 const GITHUB_REPO = "Qur";
 const GITHUB_FILE_PATH = "database.json";
 
-// تحميل حفظ الـ Token عند فتح الإعدادات
-function loadGitHubSettings() {
-    const savedToken = localStorage.getItem('quran_github_token') || '';
-    const tokenInput = document.getElementById('githubToken');
-    if (tokenInput) tokenInput.value = savedToken;
+// 1. إدارة التوكن
+function loadGitHubToken() {
+    return localStorage.getItem('quran_github_token') || '';
 }
 
-// حفظ الـ Token
 function saveGitHubToken() {
     const tokenInput = document.getElementById('githubToken');
-    if (tokenInput) {
+    if (tokenInput && tokenInput.value.trim() !== '') {
         localStorage.setItem('quran_github_token', tokenInput.value.trim());
     }
 }
 
-// تعديل دالة حفظ الإعدادات الأصلية لتشمل حفظ توكن جيت هاب
-const originalSaveSettings = window.saveSettings;
-window.saveSettings = function() {
-    saveGitHubToken();
-    if (typeof originalSaveSettings === 'function') {
-        originalSaveSettings();
-    }
-};
-
-// تعديل دالة فتح الإعدادات لتشمل تحميل التوكن
-const originalOpenSettings = window.openSettings;
-window.openSettings = function() {
-    if (typeof originalOpenSettings === 'function') {
-        originalOpenSettings();
-    }
-    loadGitHubSettings();
-};
-
-// حساب حجم/عمق البيانات لمقارنة أيهما أكثر
-function calculateDataScore(data) {
-    if (!data) return 0;
-    let score = 0;
-    try {
-        const students = typeof data.students === 'string' ? JSON.parse(data.students) : (data.students || []);
-        const groups = typeof data.groups === 'string' ? JSON.parse(data.groups) : (data.groups || []);
-        
-        score += groups.length * 10;
-        score += students.length * 20;
-
-        students.forEach(st => {
-            if (st.history) score += st.history.length * 5;
-            if (st.evaluations) score += Object.keys(st.evaluations).length * 2;
-        });
-    } catch(e) {
-        // في حال تعذر التفكيك نعتمد حجم السلسلة النصية
-        score = JSON.stringify(data).length;
-    }
-    return score;
-}
-
-// تجميع كافة البيانات المحلية
+// 2. تجميع وتطبيق البيانات محلياً
 function getLocalFullData() {
     return {
         groups: localStorage.getItem('quran_groups_list') || '[]',
@@ -1768,121 +1723,146 @@ function getLocalFullData() {
     };
 }
 
-// تطبيق البيانات المستلمة على التخزين المحلي LocalStorage
 function applyDataToLocal(data) {
+    if (!data) return;
     if (data.groups) localStorage.setItem('quran_groups_list', typeof data.groups === 'string' ? data.groups : JSON.stringify(data.groups));
     if (data.currentGroupId) localStorage.setItem('quran_current_group_id', data.currentGroupId);
     if (data.students) localStorage.setItem('quran_students_list', typeof data.students === 'string' ? data.students : JSON.stringify(data.students));
     if (data.currentId) localStorage.setItem('quran_current_student_id', data.currentId);
     if (data.settings) localStorage.setItem('quran_teacher_settings', typeof data.settings === 'string' ? data.settings : JSON.stringify(data.settings));
 
-    // إعادة تحميل البيانات في الواجهة
-    if (typeof loadSettings === 'function') loadSettings();
-    if (typeof loadGroupsData === 'function') loadGroupsData();
-    if (typeof loadStudentsData === 'function') loadStudentsData();
+    loadSettings();
+    loadGroupsData();
+    loadStudentsData();
+    renderList();
 }
 
-// الدالة الرئيسة للمزامنة مع GitHub
-async function syncWithGitHub() {
-    const token = localStorage.getItem('quran_github_token') || (document.getElementById('githubToken') ? document.getElementById('githubToken').value.trim() : '');
-    const statusDiv = document.getElementById('githubSyncStatus');
-
-    if (!token) {
-        alert("يرجى إدخال GitHub Token أولاً في الإعدادات!");
-        return;
-    }
-
-    if (statusDiv) {
-        statusDiv.style.color = "var(--accent-color)";
-        statusDiv.innerText = "جاري الاتصال بـ GitHub والمزامنة...";
-    }
+// 3. المزامنة التلقائية (سحب البيانات) - تم إزالة المقارنة تماماً
+async function pullFromGitHub() {
+    const token = loadGitHubToken();
+    if (!token) return;
 
     const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
-
     try {
-        // 1. جلب البيانات الحالية من GitHub
         const response = await fetch(apiUrl, {
             headers: {
                 'Authorization': `token ${token}`,
                 'Accept': 'application/vnd.github.v3+json'
-            }
+            },
+            cache: 'no-store' // لضمان جلب أحدث نسخة دائماً وعدم استخدام الكاش
         });
-
-        let remoteData = null;
-        let remoteSha = null;
 
         if (response.ok) {
             const resJson = await response.json();
-            remoteSha = resJson.sha;
-            // فك تشفير المحتوى القادم من جيت هاب (Base64 -> UTF-8)
+            localStorage.setItem('github_file_sha', resJson.sha); // حفظ رمز الملف للرفع
             const decodedContent = decodeURIComponent(escape(atob(resJson.content.replace(/\n/g, ''))));
-            remoteData = JSON.parse(decodedContent);
-        } else if (response.status !== 404) {
-            throw new Error(`خطأ في الاتصال بـ GitHub: ${response.statusText}`);
-        }
-
-        const localData = getLocalFullData();
-        const localScore = calculateDataScore(localData);
-        const remoteScore = remoteData ? calculateDataScore(remoteData) : -1;
-
-        // 2. مقارنة البيانات
-        if (remoteScore > localScore) {
-            // بيانات GitHub أكثر -> تحديث المحلّي
+            const remoteData = JSON.parse(decodedContent);
             applyDataToLocal(remoteData);
-            if (statusDiv) {
-                statusDiv.style.color = "var(--success-color)";
-                statusDiv.innerText = "تم إيجاد بيانات أحدث على GitHub وتحديث الـ JSON المحلي بنجاح!";
-            }
-            alert("تم تحديث البيانات المحلية من GitHub بنجاح!");
-        } else if (localScore > remoteScore) {
-            // بيانات JSON المحلي أكثر (أو الملف غير موجود) -> رفع وتحديث GitHub
-            const jsonString = JSON.stringify(localData, null, 2);
-            // ترميز UTF-8 إلى Base64
-            const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
-
-            const putBody = {
-                message: "مزامنة تلقائية لقاعدة البيانات",
-                content: encodedContent
-            };
-            if (remoteSha) putBody.sha = remoteSha;
-
-            const putResponse = await fetch(apiUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify(putBody)
-            });
-
-            if (!putResponse.ok) {
-                throw new Error("تعذر رفع البيانات إلى GitHub.");
-            }
-
-            if (statusDiv) {
-                statusDiv.style.color = "var(--success-color)";
-                statusDiv.innerText = "بياناتك المحلية أحدث! تم تحديث قاعدة بيانات GitHub بنجاح.";
-            }
-            alert("تم رفع وتحديث البيانات على GitHub بنجاح!");
-        } else {
-            // البيانات متساوية
-            if (statusDiv) {
-                statusDiv.style.color = "var(--success-color)";
-                statusDiv.innerText = "البيانات متزامنة بالفعل وتتطابق مع GitHub!";
-            }
-            alert("البيانات متطابقة ومُحدثة بالفعل!");
         }
-
     } catch (err) {
-        console.error(err);
-        if (statusDiv) {
-            statusDiv.style.color = "var(--danger-color)";
-            statusDiv.innerText = "فشلت المزامنة: " + err.message;
-        }
-        alert("حدث خطأ أثناء المزامنة: " + err.message);
+        console.error("خطأ في جلب البيانات:", err);
     }
 }
+
+// 4. المزامنة التلقائية (رفع البيانات)
+async function pushToGitHub() {
+    const token = loadGitHubToken();
+    if (!token) return;
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+    const localData = getLocalFullData();
+    const jsonString = JSON.stringify(localData, null, 2);
+    const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
+
+    const putBody = {
+        message: "مزامنة تلقائية وفورية للملفات",
+        content: encodedContent
+    };
+
+    const sha = localStorage.getItem('github_file_sha');
+    if (sha) putBody.sha = sha;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify(putBody)
+        });
+
+        if (response.ok) {
+            const resJson = await response.json();
+            localStorage.setItem('github_file_sha', resJson.content.sha); // تحديث الـ SHA الجديد
+        }
+    } catch (err) {
+        console.error("خطأ في الرفع:", err);
+    }
+}
+
+// 5. ربط الدوال التلقائية بأحداث التطبيق
+
+// سحب البيانات تلقائياً أول ما يفتح التطبيق
+const originalOnLoad = window.onload;
+window.onload = function() {
+    if (typeof originalOnLoad === 'function') originalOnLoad();
+    pullFromGitHub();
+};
+
+// استرجاع وعرض التوكن عند فتح نافذة الإعدادات
+const originalOpenSettings = window.openSettings;
+window.openSettings = function() {
+    if (typeof originalOpenSettings === 'function') originalOpenSettings();
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput) tokenInput.value = loadGitHubToken();
+};
+
+// حفظ الإعدادات
+const originalSaveSettings = window.saveSettings;
+window.saveSettings = async function() {
+    const oldToken = loadGitHubToken();
+    saveGitHubToken();
+    const newToken = loadGitHubToken();
+    
+    if (typeof originalSaveSettings === 'function') originalSaveSettings();
+    
+    // إذا أضاف المستخدم توكن جديد لأول مرة، نسحب البيانات بدل ما نرفع فوقها ونمسح السحابة
+    if (newToken && newToken !== oldToken) {
+        await pullFromGitHub();
+    } else {
+        pushToGitHub(); 
+    }
+};
+
+// رفع تلقائي عند حفظ تقييم أو تعديل الطلاب
+const originalSaveStudentsToStorage = window.saveStudentsToStorage;
+window.saveStudentsToStorage = function() {
+    if (typeof originalSaveStudentsToStorage === 'function') originalSaveStudentsToStorage();
+    pushToGitHub();
+};
+
+// رفع تلقائي عند إضافة حلقة
+const originalAddNewGroup = window.addNewGroup;
+window.addNewGroup = function() {
+    if (typeof originalAddNewGroup === 'function') originalAddNewGroup();
+    pushToGitHub();
+};
+
+// رفع تلقائي عند تغيير اسم حلقة
+const originalRenameGroup = window.renameGroup;
+window.renameGroup = function() {
+    if (typeof originalRenameGroup === 'function') originalRenameGroup();
+    pushToGitHub();
+};
+
+// رفع تلقائي عند حذف حلقة
+const originalDeleteGroup = window.deleteGroup;
+window.deleteGroup = function() {
+    if (typeof originalDeleteGroup === 'function') originalDeleteGroup();
+    pushToGitHub();
+};
 </script>
 </body>
 </html>
