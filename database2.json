@@ -1,7 +1,7 @@
 {
   "groups": "[{\"id\":\"group_1784751312400\",\"name\":\"k\"}]",
   "currentGroupId": "group_1784751312400",
-  "students": "[{\"id\":\"stu_1784751317847\",\"name\":\"k\",\"groupId\":\"group_1784751312400\",\"data\":{},\"surahData\":{},\"ajzaData\":{}}]",
+  "students": "[{\"id\":\"stu_1784751317847\",\"name\":\"k\",\"groupId\":\"group_1784751312400\",\"data\":{},\"surahData\":{},\"ajzaData\":{\"1\":[{\"attemptNumber\":1,\"date\":\"٢٢‏/٧‏/٢٠٢٦\",\"errors\":0,\"doubts\":0,\"hesitations\":0,\"tajweedErrors\":0,\"score\":10,\"scopeType\":\"all\"}]}}]",
   "currentId": "stu_1784751317847",
   "settings": "{\"errorDeduction\":1,\"doubtDeduction\":1,\"tajweedDeduction\":0.25,\"confidenceDeduction\":5}"
 }
