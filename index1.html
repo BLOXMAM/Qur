@@ -1689,18 +1689,16 @@
         }
     </script>
 <!-- ======================================================== -->
-<!-- سكريبت المزامنة الذكية مع GitHub (بيانات مشفرة بـ Base64) -->
+<!-- سكريبت المزامنة الذكية مع GitHub (مع نظام فحص الأخطاء) -->
 <!-- ======================================================== -->
 <script>
-    // 1. البيانات الخاصة بك بعد تشفيرها بـ Base64 لزيادة الأمان
     const ENCRYPTED_CONFIG = {
         token: "Z2l0aHViX3BhdF8xMUFaVkpPQlEwaVVkemFTZUdyNEMxX2ZyVVB3TnA4VmhsU01HNjNRdFFnSTNGZ1FkUjZBaDZjWU5ibzFMaHdzTTVJTThISzZORUV1RDhFYkFS",
         owner: "QkxPWE1BTQ==",
         repo: "UXVy",
-        path: "cXVyYW5fZGF0YS5qc29u" // اسم ملف البيانات: quran_data.json
+        path: "cXVyYW5fZGF0YS5qc29u"
     };
 
-    // 2. دالة فك التشفير التلقائية وقت التشغيل
     function getDecryptedConfig() {
         return {
             token: atob(ENCRYPTED_CONFIG.token),
@@ -1710,7 +1708,6 @@
         };
     }
 
-    // 3. تجميع كافة بيانات الـ LocalStorage الحالية في التطبيق
     function getFullLocalStorageData() {
         const backup = {
             groups: localStorage.getItem('quran_groups_list'),
@@ -1724,7 +1721,6 @@
         return JSON.stringify(backup);
     }
 
-    // 4. تطبيق البيانات القادمة من GitHub على الـ LocalStorage
     function applyDataToLocal(jsonString) {
         try {
             const data = JSON.parse(jsonString);
@@ -1735,28 +1731,28 @@
             if (data.settings) localStorage.setItem('quran_teacher_settings', data.settings);
             if (data.sortOrder) localStorage.setItem('quran_sort_order', data.sortOrder);
 
-            // تحديث الواجهة عبر استدعاء دوال ملفك الأصلي
             if (typeof loadSettings === 'function') loadSettings();
             if (typeof loadGroupsData === 'function') loadGroupsData();
             if (typeof loadStudentsData === 'function') loadStudentsData();
             if (typeof renderList === 'function') renderList();
             
-            console.log("تمت المزامنة بنجاح وتحديث البيانات المحلية من GitHub.");
+            alert("✅ تم جلب البيانات بنجاح من GitHub وتحديث التطبيق!");
         } catch (e) {
-            console.error("خطأ أثناء قراءة بيانات JSON:", e);
+            alert("❌ خطأ أثناء معالجة بيانات JSON: " + e.message);
         }
     }
 
-    // 5. محرك المزامنة الرئيسي ومقارنة الأحجام
     async function syncDataWithGitHub() {
-        if (!navigator.onLine) return; // العمل أوفلاين في حال عدم توفر الإنترنت
+        if (!navigator.onLine) {
+            console.log("لا يوجد اتصال بالإنترنت.");
+            return;
+        }
 
         const config = getDecryptedConfig();
         const apiUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${config.path}`;
         const localJsonStr = getFullLocalStorageData();
 
         try {
-            // جلب البيانات من GitHub
             const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
@@ -1769,28 +1765,28 @@
                 const remoteData = await response.json();
                 const remoteSha = remoteData.sha;
                 
-                // فك تشفير UTF-8 للبيانات القادمة من GitHub
-                const decodedRemoteContent = decodeURIComponent(escape(atob(remoteData.content.replace(/\n/g, ''))));
+                // فك التشفير بأمان لدعم اللغة العربية
+                const decodedRemoteContent = decodeURIComponent(escape(atob(remoteData.content.replace(/\s/g, ''))));
 
-                // إذا كانت البيانات المحلية أكثر أو تتساوى -> رفع إلى GitHub
                 if (localJsonStr.length >= decodedRemoteContent.length) {
                     await pushToGitHub(apiUrl, config.token, localJsonStr, remoteSha);
                 } else {
-                    // إذا بيانات GitHub أكثر -> تحديث المحتوى المحلي
                     applyDataToLocal(decodedRemoteContent);
                 }
 
             } else if (response.status === 404) {
-                // إنشاء الملف لأول مرة في المستودع
+                // الملف غير موجود -> إنشاء ملف جديد
                 await pushToGitHub(apiUrl, config.token, localJsonStr, null);
+            } else {
+                alert(`❌ فشل الاتصال بـ GitHub. رمز الخطأ: ${response.status}`);
             }
         } catch (error) {
-            console.error("فشلت عملية المزامنة مع GitHub:", error);
+            alert("❌ خطأ بالشبكة أو بالسكريبت: " + error.message);
         }
     }
 
-    // 6. دالة رفع وتحديث الملف في GitHub
     async function pushToGitHub(apiUrl, token, contentString, sha) {
+        // تشفير اللغة العربية إلى Base64 بأمان
         const encodedContent = btoa(unescape(encodeURIComponent(contentString)));
         const bodyData = {
             message: "تحديث تلقائي لسجل تحفيظ القرآن",
@@ -1798,7 +1794,7 @@
         };
         if (sha) bodyData.sha = sha;
 
-        await fetch(apiUrl, {
+        const res = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Authorization': `token ${token}`,
@@ -1806,18 +1802,18 @@
             },
             body: JSON.stringify(bodyData)
         });
+
+        if (res.ok) {
+            alert("✅ تم رفع البيانات وإنشاء/تحديث الملف بنجاح على GitHub!");
+        } else {
+            const errJson = await res.json();
+            alert(`❌ فشل الرفع (${res.status}): ${errJson.message}`);
+        }
     }
 
-    // 7. تشغيل التزامن تلقائياً (عند الفتح + عند النقر على الأزرار)
+    // تشغيل التزامن بعد تحميل الصفحة بـ 1.5 ثانية
     window.addEventListener('load', () => {
-        setTimeout(syncDataWithGitHub, 1000);
-    });
-
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (btn) {
-            setTimeout(syncDataWithGitHub, 500);
-        }
+        setTimeout(syncDataWithGitHub, 1500);
     });
 </script>
 </body>
