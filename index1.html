@@ -330,7 +330,6 @@
     <header>
         <h1><i class="ph ph-book-open"></i> سجل المتابعة لحفظ القرآن</h1>
         <div class="header-actions">
-            <button class="btn btn-info" onclick="syncWithGitHub()"><i class="ph ph-cloud-arrow-up"></i> مزامنة سحابية</button>
             <button class="btn btn-info" onclick="exportData()"><i class="ph ph-download-simple"></i> تصدير نسخة احتياطية</button>
             <button class="btn btn-info" onclick="triggerImport()"><i class="ph ph-upload-simple"></i> استيراد نسخة احتياطية</button>
             <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importData(event)">
@@ -368,7 +367,7 @@
     </div>
 
     <dialog id="settingsDialog">
-        <h2><i class="ph ph-gear"></i> الإعدادات العامة</h2>
+        <h2><i class="ph ph-gear"></i> إعدادات خصم درجات التقييم</h2>
         <div class="form-group">
             <label for="errorDeduction">الخصم لكل خطأ واحد (درجة):</label>
             <input type="number" id="errorDeduction" step="0.1" min="0" value="1.0">
@@ -385,15 +384,15 @@
             <label for="confidenceDeduction">خصم مستوى الثقة لكل تردد واحد (%):</label>
             <input type="number" id="confidenceDeduction" step="1" min="0" max="100" value="5">
         </div>
-
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
-        <h3><i class="ph ph-database"></i> إعدادات قاعدة البيانات (المزامنة السحابية)</h3>
-        <div class="form-group">
-            <label for="githubToken">تعريف قاعدة البيانات (GitHub Token):</label>
-            <input type="password" id="githubToken" placeholder="أدخل رمز التوكن الخاص بك هنا">
-            <small style="color: #888; font-size: 11px; margin-top: 3px;">يُحفظ هذا الرمز محلياً على جهازك لتوفير اتصال آمن بدلاً من التخزين المكشوف.</small>
-        </div>
-
+<h3><i class="ph ph-github-logo"></i> قاعدة البيانات عبر GitHub</h3>
+<div class="form-group">
+    <label for="githubToken">رمز الوصول Personal Access Token (GitHub):</label> <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+</div>
+<div class="dialog-actions" style="margin-top: 10px; justify-content: flex-start;">
+    <button type="button" class="btn btn-info" onclick="syncWithGitHub()"><i class="ph ph-arrows-clockwise"></i> مزامنة الآن مع GitHub</button>
+</div>
+<div id="githubSyncStatus" style="font-size: 13px; margin-top: 5px; font-weight: bold;"></div>
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 15px 0;">
         <h3><i class="ph ph-users-three"></i> إدارة الحلقات</h3>
         
@@ -541,7 +540,7 @@
         const juzNames = [
            "الفَاتِحَةِ", "أَفَتَطۡمَعُونَ أَن يُؤۡمِنُواْ لَكُمۡ ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "وَٱذۡكُرُواْ ٱللَّهَ فِيٓ أَيَّامٖ مَّعۡدُودَٰتٍ ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "قُلۡ أَؤُنَبِّئُكُم بِخَيۡر مِّن ذَٰلِكُمۡۖ لِلَّذِينَ ٱتَّقَوۡاْ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "يَسۡتَبۡشِرُونَ بِنِعۡمَة مِّنَ ٱللَّهِ وَفَضۡل ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "fَمَا لَكُمۡ فِي ٱلۡمُنَٰفِقِينَ فِئَتَيۡنِ وَٱللَّهُ أَرۡكاَسَهُم ",
            "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ","وَٱتۡلُ عَلَيۡهِمۡ نَبَأَ ٱبۡنَيۡ ءَادَمَ بِٱلۡحَقِّ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "إِنَّمَا يَسۡتَجِيبُ ٱلَّذِينَ يَسۡمَعُونَۘ وَٱلۡمُوۡتَىٰ يَبۡعَثُهُمُ ٱللَّهُ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "الأَعْرَافِ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَإِذۡ نَتَقۡنَا ٱلۡجَبَلَ فَوۡقَهُمۡ كَأَنَّهُۥ ظُلَّةٞ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيۡء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِنَّ كَثيرٗا مِّنَ ٱلۡأَحۡبَارِ ",
-           "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "لِّلَّذِينَ أَحۡسَنُواْ ٱلۡحُسۡنَىٰ وَزِيَادَةٞۖ ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَإِلَىٰ مَدۡيَنَ أَخَاهُمۡ شُعَيۡبٗاۚ", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوٓءِ", "أَفَمَن يَعۡلَمُ أَنَّمَآ أُنزِلَ إِلَيۡكَ مِن رَّبِّكَ ٱلۡحَقُّ", "الحِجْرِ", "وَقَالَ ٱللَّهُ لَا تَتَّخِذُوٓاْ إِلَٰهَيۡنِ ٱثۡنَيۡنِۖ ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "أَوَلَمۡ يَرَوۡاْ أَنَّ ٱللَّهَ ٱلَّذِي خَلَقَ ٱلسَّمَٰوَرَٰتِ وَٱلۡأَرۡضَ",
+           "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "لِّلَّذِينَ أَحۡسَنُواْ ٱلۡحُسۡنَىٰ وَزِيَادَةٞۖ ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَإِلَىٰ مَدۡيَنَ أَخَاهُمۡ شُعَيۡبٗاۚ", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوۡءِ", "أَفَمَن يَعۡلَمُ أَنَّمَآ أُنزِلَ إِلَيۡكَ مِن رَّبِّكَ ٱلۡحَقُّ", "الحِجْرِ", "وَقَالَ ٱللَّهُ لَا تَتَّخِذُوٓاْ إِلَٰهَيۡنِ ٱثۡنَيۡنِۖ ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "أَوَلَمۡ يَرَوۡاْ أَنَّ ٱللَّهَ ٱلَّذِي خَلَقَ ٱلسَّمَٰوَرَٰتِ وَٱلۡأَرۡضَ",
            "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "طه", "الأَنْبِيَاءِ", "الحَجِّ", "المُؤْمِنُونَ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ لَا تَتَّبِعُواْ خطُوَٰتِ ٱلشَّيۡطَٰنِۚ "," وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "قَالُوٓاْ أَنُؤۡمِنُ لَكَ وَٱتَّبَعَكَ ٱلۡأَرۡذَلُونَ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَقَدۡ وَصَّلۡنَا لَهُمُ ٱلۡقَوۡلِ لَعَلَّهُمۡ يَتَذَكَّرُونَ",
            "وَلَا تُجَٰدِلُوٓاْ أَهۡلَ ٱلۡكِتَٰبِ إِلَّا بِٱلَّتِي هِيَ أَحۡسَنُ ", "وَمَن يُسۡلِمۡ وَجۡهَهُۥٓ إِلَى ٱللَّهِ وَهَوَمُحۡسِنٞ", "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِ وَتَعۡمَلۡ صَٰلِحٗا ", "قُلۡ مَن يَرۡزُقُكُم مِّنَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ ", "وَمَآ أَنزَلۡنَا عَلَىٰ قَوۡمِهِ مِنۢ بَعۡدِهِ مِن جُند", "فَنَبَذۡنَٰهُ بِٱلۡعَرَآءِ وَهُوَ سَقِيمٞ", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ وَكَذَّبَ ", "وَيَٰقَوۡمِ مَا لِيٓ أدۡعُوكُمۡ إِلَى ٱلنَّجَوٰةِ", "إِلَيۡهِ يُردُّ عِلۡمُ ٱلسَّاعَةِۚ", "قَٰلَ أَوَلَوۡ جِئۡتُكُم بِأَهۡدَىٰ",
            " الأَحْقَافِ", "لَّقَدۡ رَضِيَ ٱللَّهُ عَنِ ٱلۡمُؤۡمِنِينَ إِذۡ يُبَايِعُونَكَ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ", "الرَّحْمـٰنِ", "المُجَادْلَةِ", "الجُمُعَةِ", "المُلكِ", "الجِنِّ","النَبَإِ","الأَعْلَى"
@@ -550,7 +549,7 @@
             "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النُّور", "الفرقان", "الشعراء", "النَّمْل", "القصص", "العنكبوت", "الرُّوم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"
         ];
         const ajzaNames = [
-          "الفَاتِحَةِ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوٓءِ", "الحِجْرِ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "الأَنْبِيَاءِ", "المُؤْمِنُونَ", " وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَا تُجَٰدِلُوٓاْ أَهۡلَ ٱلۡكِتَٰبِ إِلَّا بِٱلَّتِي هِيَ أَحۡسَنُ ", "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِ وَتَعۡمَلۡ صَٰلِحٗا ", "وَمَآ أَنزَلۡنَا عَلَىٰ قَوۡمِهِۦ مِنۢ بَعۡدِهِۦ مِن جُند", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ وَكَذَّبَ ", "إِلَيۡهِ يُردُّ عِلۡمُ ٱلسَّاعَةِۚ", " الأَحْقَافِ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ", "المُجَادْلَةِ", "المُلكِ", "النَبَإِ"
+          "الفَاتِحَةِ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوۡءِ", "الحِجْرِ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "الأَنْبِيَاءِ", "المُؤْمِنُونَ", " وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَا تُجَٰدِلُوٓاْ أَهۡلَ ٱلۡكِتَٰبِ إِلَّا بِٱلَّتِي هِيَ أَحۡسَنُ ", "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِ وَتَعۡمَلۡ صَٰلِحٗا ", "وَمَآ أَنزَلۡنَا عَلَىٰ قَوۡمِهِۦ مِنۢ بَعۡدِهِۦ مِن جُند", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ وَكَذَّبَ ", "إِلَيۡهِ يُردُّ عِلۡمُ ٱلسَّاعَةِۚ", " الأَحْقَافِ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ", "المُجَادْلَةِ", "المُلكِ", "النَبَإِ"
         ];
 
         const surahVersesCount = [
@@ -733,9 +732,6 @@
             document.getElementById('doubtDeduction').value = settings.doubtDeduction;
             document.getElementById('tajweedDeduction').value = settings.tajweedDeduction;
             document.getElementById('confidenceDeduction').value = settings.confidenceDeduction;
-
-            const savedToken = localStorage.getItem('quran_github_token') || '';
-            document.getElementById('githubToken').value = savedToken;
         }
 
         function saveSettings() {
@@ -744,85 +740,11 @@
             settings.tajweedDeduction = parseFloat(document.getElementById('tajweedDeduction').value) || 0;
             settings.confidenceDeduction = parseFloat(document.getElementById('confidenceDeduction').value) || 0;
             localStorage.setItem('quran_teacher_settings', JSON.stringify(settings));
-
-            const tokenVal = document.getElementById('githubToken').value.trim();
-            localStorage.setItem('quran_github_token', tokenVal);
-
             closeDialog('settingsDialog');
             renderList();
             sendDataToSketchware("SETTINGS_UPDATED");
         }
 
-        async function syncWithGitHub() {
-    const userToken = localStorage.getItem('quran_github_token');
-    
-    // ⚙️ قم بتعديل هذه البيانات الخاصة بمستودعك على GitHub
-    const OWNER = 'BLOXMAM';
-    const REPO = 'Qur';
-    const PATH = 'quran_data.json'; // مسار الملف في المستودع
-
-    if (!userToken) {
-        alert("يرجى ضبط تعريف قاعدة البيانات (GitHub Token) من قسم الإعدادات أولاً لإتمام المزامنة.");
-        openSettings();
-        return;
-    }
-
-    // تجميع البيانات المراد رفعها
-    const backupData = {
-        groups: localStorage.getItem('quran_groups_list'),
-        currentGroupId: localStorage.getItem('quran_current_group_id'),
-        students: localStorage.getItem('quran_students_list'),
-        currentId: localStorage.getItem('quran_current_student_id'),
-        settings: localStorage.getItem('quran_teacher_settings'),
-        lastUpdated: new Date().toISOString()
-    };
-
-    const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(backupData, null, 2))));
-    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
-
-    try {
-        // 1. الحصول على SHA الخاص بالملف الحالي (مطلوب للتحديث في GitHub)
-        let sha = "";
-        const getFileResponse = await fetch(url, {
-            headers: {
-                'Authorization': `token ${userToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-
-        if (getFileResponse.ok) {
-            const fileData = await getFileResponse.json();
-            sha = fileData.sha;
-        }
-
-        // 2. إرسال طلب التحديث/الرفع (PUT)
-        const putResponse = await fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${userToken}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify({
-                message: 'تحديث بيانات حفظ القرآن تلقائياً',
-                content: contentEncoded,
-                sha: sha ? sha : undefined
-            })
-        });
-
-        if (putResponse.ok) {
-            alert("✅ تم رفع وتحديث ملف quran_data.json على GitHub بنجاح!");
-            sendDataToSketchware("SYNC_SUCCESS");
-        } else {
-            const errData = await putResponse.json();
-            alert("❌ فشلت المزامنة: " + (errData.message || "تأكد من صحة الـ Token اسم المستودع"));
-            sendDataToSketchware("SYNC_FAILED");
-        }
-    } catch (error) {
-        alert("❌ حدث خطأ في الاتصال: " + error.message);
-        sendDataToSketchware("SYNC_ERROR");
-    }
-}
         function loadGroupsData() {
             const savedGroups = localStorage.getItem('quran_groups_list');
             if (savedGroups) {
@@ -1774,5 +1696,193 @@
             event.target.value = '';
         }
     </script>
+<script>
+// ثوابت المزامنة الخاصة بـ GitHub
+const GITHUB_OWNER = "BLOXMAM";
+const GITHUB_REPO = "Qur";
+const GITHUB_FILE_PATH = "database.json";
+
+// تحميل حفظ الـ Token عند فتح الإعدادات
+function loadGitHubSettings() {
+    const savedToken = localStorage.getItem('quran_github_token') || '';
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput) tokenInput.value = savedToken;
+}
+
+// حفظ الـ Token
+function saveGitHubToken() {
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput) {
+        localStorage.setItem('quran_github_token', tokenInput.value.trim());
+    }
+}
+
+// تعديل دالة حفظ الإعدادات الأصلية لتشمل حفظ توكن جيت هاب
+const originalSaveSettings = window.saveSettings;
+window.saveSettings = function() {
+    saveGitHubToken();
+    if (typeof originalSaveSettings === 'function') {
+        originalSaveSettings();
+    }
+};
+
+// تعديل دالة فتح الإعدادات لتشمل تحميل التوكن
+const originalOpenSettings = window.openSettings;
+window.openSettings = function() {
+    if (typeof originalOpenSettings === 'function') {
+        originalOpenSettings();
+    }
+    loadGitHubSettings();
+};
+
+// حساب حجم/عمق البيانات لمقارنة أيهما أكثر
+function calculateDataScore(data) {
+    if (!data) return 0;
+    let score = 0;
+    try {
+        const students = typeof data.students === 'string' ? JSON.parse(data.students) : (data.students || []);
+        const groups = typeof data.groups === 'string' ? JSON.parse(data.groups) : (data.groups || []);
+        
+        score += groups.length * 10;
+        score += students.length * 20;
+
+        students.forEach(st => {
+            if (st.history) score += st.history.length * 5;
+            if (st.evaluations) score += Object.keys(st.evaluations).length * 2;
+        });
+    } catch(e) {
+        // في حال تعذر التفكيك نعتمد حجم السلسلة النصية
+        score = JSON.stringify(data).length;
+    }
+    return score;
+}
+
+// تجميع كافة البيانات المحلية
+function getLocalFullData() {
+    return {
+        groups: localStorage.getItem('quran_groups_list') || '[]',
+        currentGroupId: localStorage.getItem('quran_current_group_id') || '',
+        students: localStorage.getItem('quran_students_list') || '[]',
+        currentId: localStorage.getItem('quran_current_student_id') || '',
+        settings: localStorage.getItem('quran_teacher_settings') || '{}'
+    };
+}
+
+// تطبيق البيانات المستلمة على التخزين المحلي LocalStorage
+function applyDataToLocal(data) {
+    if (data.groups) localStorage.setItem('quran_groups_list', typeof data.groups === 'string' ? data.groups : JSON.stringify(data.groups));
+    if (data.currentGroupId) localStorage.setItem('quran_current_group_id', data.currentGroupId);
+    if (data.students) localStorage.setItem('quran_students_list', typeof data.students === 'string' ? data.students : JSON.stringify(data.students));
+    if (data.currentId) localStorage.setItem('quran_current_student_id', data.currentId);
+    if (data.settings) localStorage.setItem('quran_teacher_settings', typeof data.settings === 'string' ? data.settings : JSON.stringify(data.settings));
+
+    // إعادة تحميل البيانات في الواجهة
+    if (typeof loadSettings === 'function') loadSettings();
+    if (typeof loadGroupsData === 'function') loadGroupsData();
+    if (typeof loadStudentsData === 'function') loadStudentsData();
+}
+
+// الدالة الرئيسة للمزامنة مع GitHub
+async function syncWithGitHub() {
+    const token = localStorage.getItem('quran_github_token') || (document.getElementById('githubToken') ? document.getElementById('githubToken').value.trim() : '');
+    const statusDiv = document.getElementById('githubSyncStatus');
+
+    if (!token) {
+        alert("يرجى إدخال GitHub Token أولاً في الإعدادات!");
+        return;
+    }
+
+    if (statusDiv) {
+        statusDiv.style.color = "var(--accent-color)";
+        statusDiv.innerText = "جاري الاتصال بـ GitHub والمزامنة...";
+    }
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+
+    try {
+        // 1. جلب البيانات الحالية من GitHub
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        let remoteData = null;
+        let remoteSha = null;
+
+        if (response.ok) {
+            const resJson = await response.json();
+            remoteSha = resJson.sha;
+            // فك تشفير المحتوى القادم من جيت هاب (Base64 -> UTF-8)
+            const decodedContent = decodeURIComponent(escape(atob(resJson.content.replace(/\n/g, ''))));
+            remoteData = JSON.parse(decodedContent);
+        } else if (response.status !== 404) {
+            throw new Error(`خطأ في الاتصال بـ GitHub: ${response.statusText}`);
+        }
+
+        const localData = getLocalFullData();
+        const localScore = calculateDataScore(localData);
+        const remoteScore = remoteData ? calculateDataScore(remoteData) : -1;
+
+        // 2. مقارنة البيانات
+        if (remoteScore > localScore) {
+            // بيانات GitHub أكثر -> تحديث المحلّي
+            applyDataToLocal(remoteData);
+            if (statusDiv) {
+                statusDiv.style.color = "var(--success-color)";
+                statusDiv.innerText = "تم إيجاد بيانات أحدث على GitHub وتحديث الـ JSON المحلي بنجاح!";
+            }
+            alert("تم تحديث البيانات المحلية من GitHub بنجاح!");
+        } else if (localScore > remoteScore) {
+            // بيانات JSON المحلي أكثر (أو الملف غير موجود) -> رفع وتحديث GitHub
+            const jsonString = JSON.stringify(localData, null, 2);
+            // ترميز UTF-8 إلى Base64
+            const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
+
+            const putBody = {
+                message: "مزامنة تلقائية لقاعدة البيانات",
+                content: encodedContent
+            };
+            if (remoteSha) putBody.sha = remoteSha;
+
+            const putResponse = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify(putBody)
+            });
+
+            if (!putResponse.ok) {
+                throw new Error("تعذر رفع البيانات إلى GitHub.");
+            }
+
+            if (statusDiv) {
+                statusDiv.style.color = "var(--success-color)";
+                statusDiv.innerText = "بياناتك المحلية أحدث! تم تحديث قاعدة بيانات GitHub بنجاح.";
+            }
+            alert("تم رفع وتحديث البيانات على GitHub بنجاح!");
+        } else {
+            // البيانات متساوية
+            if (statusDiv) {
+                statusDiv.style.color = "var(--success-color)";
+                statusDiv.innerText = "البيانات متزامنة بالفعل وتتطابق مع GitHub!";
+            }
+            alert("البيانات متطابقة ومُحدثة بالفعل!");
+        }
+
+    } catch (err) {
+        console.error(err);
+        if (statusDiv) {
+            statusDiv.style.color = "var(--danger-color)";
+            statusDiv.innerText = "فشلت المزامنة: " + err.message;
+        }
+        alert("حدث خطأ أثناء المزامنة: " + err.message);
+    }
+}
+</script>
 </body>
 </html>
