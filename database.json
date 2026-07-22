@@ -1,0 +1,7 @@
+{
+  "groups": "[{\"id\":\"group_default\",\"name\":\"حلقة إفتراضية\"}]",
+  "currentGroupId": "group_default",
+  "students": "[{\"id\":\"stu_1784744298535\",\"name\":\"الطالب التجريبي\",\"groupId\":\"group_default\",\"data\":{},\"surahData\":{},\"ajzaData\":{}}]",
+  "currentId": "",
+  "settings": "{\"errorDeduction\":1,\"doubtDeduction\":1,\"tajweedDeduction\":0.25,\"confidenceDeduction\":5}"
+}
