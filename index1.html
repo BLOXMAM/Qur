@@ -753,19 +753,76 @@
             sendDataToSketchware("SETTINGS_UPDATED");
         }
 
-        function syncWithGitHub() {
-            const userToken = localStorage.getItem('quran_github_token');
-            if (!userToken) {
-                alert("يرجى ضبط تعريف قاعدة البيانات (GitHub Token) من قسم الإعدادات أولاً لإتمام المزامنة.");
-                openSettings();
-                return;
-            }
+        async function syncWithGitHub() {
+    const userToken = localStorage.getItem('quran_github_token');
+    
+    // ⚙️ قم بتعديل هذه البيانات الخاصة بمستودعك على GitHub
+    const OWNER = 'BLOXMAM';
+    const REPO = 'Qur';
+    const PATH = 'quran_data.json'; // مسار الملف في المستودع
 
-            // يتم هنا طلب وإدارة المزامنة محلياً بالـ Token المحفوظ بالـ LocalStorage
-            alert("تم إطلاق عملية المزامنة السحابية بنجاح عبر Token المحفوظ محلياً.");
-            sendDataToSketchware("SYNC_REQUESTED");
+    if (!userToken) {
+        alert("يرجى ضبط تعريف قاعدة البيانات (GitHub Token) من قسم الإعدادات أولاً لإتمام المزامنة.");
+        openSettings();
+        return;
+    }
+
+    // تجميع البيانات المراد رفعها
+    const backupData = {
+        groups: localStorage.getItem('quran_groups_list'),
+        currentGroupId: localStorage.getItem('quran_current_group_id'),
+        students: localStorage.getItem('quran_students_list'),
+        currentId: localStorage.getItem('quran_current_student_id'),
+        settings: localStorage.getItem('quran_teacher_settings'),
+        lastUpdated: new Date().toISOString()
+    };
+
+    const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(backupData, null, 2))));
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+
+    try {
+        // 1. الحصول على SHA الخاص بالملف الحالي (مطلوب للتحديث في GitHub)
+        let sha = "";
+        const getFileResponse = await fetch(url, {
+            headers: {
+                'Authorization': `token ${userToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        if (getFileResponse.ok) {
+            const fileData = await getFileResponse.json();
+            sha = fileData.sha;
         }
 
+        // 2. إرسال طلب التحديث/الرفع (PUT)
+        const putResponse = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${userToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: JSON.stringify({
+                message: 'تحديث بيانات حفظ القرآن تلقائياً',
+                content: contentEncoded,
+                sha: sha ? sha : undefined
+            })
+        });
+
+        if (putResponse.ok) {
+            alert("✅ تم رفع وتحديث ملف quran_data.json على GitHub بنجاح!");
+            sendDataToSketchware("SYNC_SUCCESS");
+        } else {
+            const errData = await putResponse.json();
+            alert("❌ فشلت المزامنة: " + (errData.message || "تأكد من صحة الـ Token اسم المستودع"));
+            sendDataToSketchware("SYNC_FAILED");
+        }
+    } catch (error) {
+        alert("❌ حدث خطأ في الاتصال: " + error.message);
+        sendDataToSketchware("SYNC_ERROR");
+    }
+}
         function loadGroupsData() {
             const savedGroups = localStorage.getItem('quran_groups_list');
             if (savedGroups) {
