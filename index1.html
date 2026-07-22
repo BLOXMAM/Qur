@@ -1280,11 +1280,16 @@
                     onVerseStartChanged();
                     document.getElementById('verseEnd').value = attempt.verseEnd || 1;
                 }
+                
+                // إظهار الصفحات التي بها إشكال بانتظام عند التعديل
                 if (attempt.problemPages && attempt.problemPages.length > 0) {
                     document.getElementById('enableProblemPages').checked = true;
                     toggleProblemPages();
                     document.getElementById('problemPagesList').innerHTML = '';
                     attempt.problemPages.forEach(p => addProblemPageField(p));
+                } else {
+                    document.getElementById('enableProblemPages').checked = false;
+                    document.getElementById('problemPagesContainer').style.display = 'none';
                 }
             } else {
                 document.getElementById('juzAhzabScopeType').value = attempt.scopeType || 'all';
@@ -1302,6 +1307,9 @@
                     Array.from(multiProb.options).forEach(opt => {
                         opt.selected = attempt.problemSurahs.includes(opt.value);
                     });
+                } else {
+                    document.getElementById('enableJuzProblemSurahs').checked = false;
+                    document.getElementById('juzProblemSurahsContainer').style.display = 'none';
                 }
             }
 
@@ -1478,7 +1486,6 @@
 
             let currentAttemptData = (editingAttemptIndex !== null) ? targetData[currentSelectedIndex][editingAttemptIndex] : null;
 
-            // إذا كان التعديل يتم على مجموعة كاملة
             if (editingAttemptIndex !== null && currentAttemptData && currentAttemptData.isGroup) {
                 const groupIdToUpdate = currentAttemptData.groupIdentifier;
                 let rangeSurahs = getSurahRangeArray(currentAttemptData.startSurahIdx, currentAttemptData.endSurahIdx);
@@ -1589,7 +1596,6 @@
                 problemSurahs = Array.from(multiProb.selectedOptions).map(opt => opt.value);
             }
 
-            // توليد معرّف فريد ومستقل تماماً لكل عملية تسميع مجموعة
             const groupIdentifier = 'grp_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
             rangeSurahs.forEach(sIdx => {
@@ -1789,7 +1795,6 @@
             if (targetData[itemIndex] && targetData[itemIndex][attemptArrayId]) {
                 const targetAttempt = targetData[itemIndex][attemptArrayId];
                 
-                // منع حذف سورة مفردة إذا كانت السورة محتواتة ضمن مجموعة
                 if (currentSelectedTab === 'suwar' && targetAttempt.isGroup) {
                     alert("هذا السجل تابع لتسميع مجموعة مخصص. لحذفه، يرجى الاستعانة بخيار حذف المجموعة من شاشة (تسميع مجموعة مخصص).");
                     return;
