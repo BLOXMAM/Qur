@@ -199,6 +199,56 @@
         }
         [data-theme="dark"] .tab-btn.active { color: #0f172a; }
 
+        /* تنسيقات الفرز حسب التقييم */
+        .rating-filter-wrapper {
+            max-width: 1100px;
+            margin: 0 auto 15px auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .rating-cards-scroll {
+            display: none;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            direction: rtl;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .rating-cards-scroll.show {
+            display: flex;
+        }
+
+        .rating-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            color: var(--text-color);
+            flex: 0 0 auto;
+        }
+
+        .rating-card:hover {
+            border-color: var(--accent-color);
+        }
+
+        .rating-card.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        [data-theme="dark"] .rating-card.active {
+            color: #0f172a;
+        }
+
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -371,6 +421,24 @@
 
     <div style="max-width:1100px; margin: 0 auto 15px auto; display:none;" id="groupEvalContainer">
         <button class="btn" style="color: #ffffff; background-color: var(--group-label-color); width:100%;" onclick="openGroupEvaluation()"><i class="ph ph-plus"></i> تسميع مجموعة مخصص</button>
+    </div>
+
+    <!-- زر الفرز حسب التقييم وكروت التمرير -->
+    <div class="rating-filter-wrapper">
+        <button class="btn btn-secondary" id="ratingFilterBtn" onclick="toggleRatingFilter()"><i class="ph ph-funnel"></i> الفرز حسب التقييم</button>
+        <div class="rating-cards-scroll" id="ratingCardsScroll">
+            <div class="rating-card" onclick="selectRatingFilter(10)">10/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(9)">9/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(8)">8/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(7)">7/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(6)">6/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(5)">5/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(4)">4/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(3)">3/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(2)">2/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(1)">1/10</div>
+            <div class="rating-card" onclick="selectRatingFilter(0)">0/10</div>
+        </div>
     </div>
 
     <div class="container" id="juzContainer">
@@ -574,7 +642,7 @@
 
     <script>
         const juzNames = [
-           "الفَاتِحَةِ", "أَفَتَطۡمَعُونَ أَن يُؤۡمِنُواْ لَكُمۡ ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "وَٱذۡكُرُواْ ٱللَّهَ فِيٓ أَيَّامٖ مَّعۡدُودَٰتٍ ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "قُلۡ أَؤُنَبِّئُكُم بِخَيۡر مِّن ذَٰلِكُمۡۖ لِلَّذِينَ ٱتَّقَوۡاْ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "يَسۡتَبۡشِرُونَ بِنِعۡمَة مِّنَ ٱللَّهِ وَفَضۡل ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "فَمَا لَكُمۡ فِي ٱلۡمُنَٰفِقِينَ فِئَتَيۡنِ وَٱللَّهُ أَرۡكَسَهُم ",
+           "الفَاتِحَةِ", "أَفَتَطۡمَعُونَ أَن يُؤۡمِنُواْ لَكُمۡ ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "وَٱذۡكُرُواْ ٱللَّهَ فِيٓ أَيَّامٖ مَّعۡدُودَٰتٍ ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "قُلۡ أَؤُنَبِّئُكُم بِخَيۡر مِّن ذَٰلِكُمۡۖ لِلَّذِينَ ٱتَّقَوۡاْ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "يَسۡتَبۡشِرُونَ بِنِعۡمَة مِّنَ ٱللَّهِ وَفَضۡل ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "fَمَا لَكُمۡ فِي ٱلۡمُنَٰفِقِينَ فِئَتَيۡنِ وَٱللَّهُ أَرۡكاَسَهُم ",
            "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ","وَٱتۡلُ عَلَيۡهِمۡ نَبَأَ ٱبۡنَيۡ ءَادَمَ بِٱلۡحَقِّ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "إِنَّمَا يَسۡتَجِيبُ ٱلَّذِينَ يَسۡمَعُونَۘ وَٱلۡمُوۡتَىٰ يَبۡعَثُهُمُ ٱللَّهُ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "الأَعْرَافِ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَإِذۡ نَتَقۡنَا ٱلۡجَبَلَ فَوۡقَهُمۡ كَأَنَّهُۥ ظُلَّةٞ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيۡء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِنَّ كَثيرٗا مِّنَ ٱلۡأَحۡبَارِ ",
            "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "لِّلَّذِينَ أَحۡسَنُواْ ٱلۡحُسۡنَىٰ وَزِيَادَةٞۖ ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَإِلَىٰ مَدۡيَنَ أَخَاهُمۡ شُعَيۡبٗاۚ", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوۡءِ", "أَفَمَن يَعۡلَمُ أَنَّمَآ أُنزِلَ إِلَيۡكَ مِن رَّبِّكَ ٱلۡحَقُّ", "الحِجْرِ", "وَقَالَ ٱللَّهُ لَا تَتَّخِذُوٓاْ إِلَٰهَيۡنِ ٱثۡنَيۡنِۖ ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "أَوَلَمۡ يَرَوۡاْ أَنَّ ٱللَّهَ ٱلَّذِي خَلَقَ ٱلسَّمَٰوَرَٰتِ وَٱلۡأَرۡضَ",
            "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "طه", "الأَنْبِيَاءِ", "الحَجِّ", "المُؤْمِنُونَ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ لَا تَتَّبِعُواْ خطُوَٰتِ ٱلشَّيۡطَٰنِۚ "," وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "قَالُوٓاْ أَنُؤۡمِنُ لَكَ وَٱتَّبَعَكَ ٱلۡأَرۡذَلُونَ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَقَدۡ وَصَّلۡنَا لَهُمُ ٱلۡقَوۡلِ لَعَلَّهُمۡ يَتَذَكَّرُونَ",
@@ -624,6 +692,7 @@
         let currentSelectedTab = 'ajza';
         let currentSelectedIndex = 1;
         let editingAttemptIndex = null;
+        let activeRatingFilter = null;
 
         window.onload = function() {
             initTheme();
@@ -633,6 +702,39 @@
             loadSortOrder();
             setupGroupSurahsDropdowns();
         };
+
+        function toggleRatingFilter() {
+            const scrollContainer = document.getElementById('ratingCardsScroll');
+            if (scrollContainer.classList.contains('show')) {
+                scrollContainer.classList.remove('show');
+                activeRatingFilter = null;
+                updateRatingCardsUI();
+                renderList();
+            } else {
+                scrollContainer.classList.add('show');
+            }
+        }
+
+        function selectRatingFilter(rating) {
+            if (activeRatingFilter === rating) {
+                activeRatingFilter = null;
+            } else {
+                activeRatingFilter = rating;
+            }
+            updateRatingCardsUI();
+            renderList();
+        }
+
+        function updateRatingCardsUI() {
+            const cards = document.querySelectorAll('.rating-card');
+            cards.forEach(card => {
+                if (activeRatingFilter !== null && card.innerText.trim() === `${activeRatingFilter}/10`) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
 
         function sendDataToSketchware(actionType) {
             if (typeof Android !== 'undefined' && Android.callAndroidBlock) {
@@ -1050,6 +1152,24 @@
             if (sortOrder === 'desc') indexes.reverse();
 
             indexes.forEach(i => {
+                const attempts = targetData[i];
+                let lastScore = null;
+                if (attempts && attempts.length > 0) {
+                    lastScore = attempts[attempts.length - 1].score;
+                }
+
+                // منطق الفرز بالتقييم
+                if (activeRatingFilter !== null) {
+                    if (lastScore === null) return;
+                    if (activeRatingFilter === 10) {
+                        if (lastScore !== 10) return;
+                    } else if (activeRatingFilter === 0) {
+                        if (lastScore < 0 || lastScore >= 1) return;
+                    } else {
+                        if (lastScore < activeRatingFilter || lastScore >= activeRatingFilter + 1) return;
+                    }
+                }
+
                 const card = document.createElement('div');
                 card.className = 'juz-card';
                 card.onclick = () => openEvaluation(i);
@@ -1062,8 +1182,7 @@
                 let problemPagesHTML = '';
                 let problemSurahsHTML = '';
                 
-                if (targetData[i] && targetData[i].length > 0) {
-                    const attempts = targetData[i];
+                if (attempts && attempts.length > 0) {
                     const lastAttempt = attempts[attempts.length - 1];
                     const score = lastAttempt.score;
                     
@@ -1478,7 +1597,6 @@
 
             let currentAttemptData = (editingAttemptIndex !== null) ? targetData[currentSelectedIndex][editingAttemptIndex] : null;
 
-            // إذا كان التعديل يتم على مجموعة كاملة
             if (editingAttemptIndex !== null && currentAttemptData && currentAttemptData.isGroup) {
                 const groupIdToUpdate = currentAttemptData.groupIdentifier;
                 let rangeSurahs = getSurahRangeArray(currentAttemptData.startSurahIdx, currentAttemptData.endSurahIdx);
@@ -1589,7 +1707,6 @@
                 problemSurahs = Array.from(multiProb.selectedOptions).map(opt => opt.value);
             }
 
-            // توليد معرّف فريد ومستقل تماماً لكل عملية تسميع مجموعة
             const groupIdentifier = 'grp_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
 
             rangeSurahs.forEach(sIdx => {
@@ -1789,7 +1906,6 @@
             if (targetData[itemIndex] && targetData[itemIndex][attemptArrayId]) {
                 const targetAttempt = targetData[itemIndex][attemptArrayId];
                 
-                // منع حذف سورة مفردة إذا كانت السورة محتواتة ضمن مجموعة
                 if (currentSelectedTab === 'suwar' && targetAttempt.isGroup) {
                     alert("هذا السجل تابع لتسميع مجموعة مخصص. لحذفه، يرجى الاستعانة بخيار حذف المجموعة من شاشة (تسميع مجموعة مخصص).");
                     return;
