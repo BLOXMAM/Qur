@@ -253,6 +253,50 @@
         .prog-down-medium { color: #d35400; }
         .prog-down-heavy { color: #c0392b; }
 
+        /* أثماط كروت إحصائيات التقييم الجانبية */
+        .eval-stat-card {
+            display: inline-flex;
+            flex-direction: column;
+            min-width: 140px;
+            max-width: 220px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            vertical-align: top;
+            white-space: normal;
+        }
+        .eval-stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-color);
+        }
+        .eval-stat-card.active-filter {
+            border: 2px solid var(--accent-color);
+            background: rgba(22, 160, 133, 0.12);
+        }
+        .eval-stat-score {
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--accent-color);
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+        .eval-stat-item {
+            font-size: 12px;
+            padding: 3px 0;
+            border-bottom: 1px dashed var(--border-color);
+            color: var(--text-color);
+        }
+        .eval-stat-item:last-child {
+            border-bottom: none;
+        }
+
         dialog {
             border: 1px solid var(--border-color);
             border-radius: 16px;
@@ -371,6 +415,14 @@
 
     <div style="max-width:1100px; margin: 0 auto 15px auto; display:none;" id="groupEvalContainer">
         <button class="btn" style="color: #ffffff; background-color: var(--group-label-color); width:100%;" onclick="openGroupEvaluation()"><i class="ph ph-plus"></i> تسميع مجموعة مخصص</button>
+    </div>
+
+    <div style="max-width:1100px; margin: 0 auto 15px auto;" id="evalStatsWrapper">
+        <button class="btn btn-secondary" id="evalStatsToggleBtn" onclick="toggleEvalStats()" style="width:100%;">
+            <i class="ph ph-chart-bar"></i> إحصائيات التقييم (الأقل حفظاً)
+        </button>
+        <div id="evalStatsCardsContainer" style="display:none; overflow-x:auto; overflow-y:hidden; white-space:nowrap; gap:12px; padding:12px 4px 8px 4px; border-radius:10px; margin-top:10px; background:var(--student-bar-bg); border:1px solid var(--border-color); -webkit-overflow-scrolling: touch;">
+        </div>
     </div>
 
     <div class="container" id="juzContainer">
@@ -561,9 +613,10 @@
             <label for="groupTajweedCount">أخطاء التجويد:</label>
             <input type="number" id="groupTajweedCount" min="0" value="0">
         </div>
+
         <div class="dialog-actions">
             <button class="btn btn-secondary" onclick="closeDialog('groupEvaluationDialog')">إغلاق</button>
-            <button class="btn" onclick="saveGroupEvaluation()">تسجيل المجموعة</button>
+            <button class="btn" id="btnSaveGroupEval" onclick="saveGroupEvaluation()">تسجيل المجموعة</button>
         </div>
 
         <div class="history-section">
@@ -574,246 +627,213 @@
 
     <script>
         const juzNames = [
-           "الفَاتِحَةِ", "أَفَتَطۡمَعُونَ أَن يُؤۡمِنُواْ لَكُمۡ ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "وَٱذۡكُرُواْ ٱللَّهَ فِيٓ أَيَّامٖ مَّعۡدُودَٰتٍ ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "قُلۡ أَؤُنَبِّئُكُم بِخَيۡر مِّن ذَٰلِكُمۡۖ لِلَّذِينَ ٱتَّقَوۡاْ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "يَسۡتَبۡشِرُونَ بِنِعۡمَة مِّنَ ٱللَّهِ وَفَضۡل ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "fَمَا لَكُمۡ فِي ٱلۡمُنَٰفِقِينَ فِئَتَيۡنِ وَٱللَّهُ أَرۡكاَسَهُم ",
-           "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ","وَٱتۡلُ عَلَيۡهِمۡ نَبَأَ ٱبۡنَيۡ ءَادَمَ بِٱلۡحَقِّ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "إِنَّمَا يَسۡتَجِيبُ ٱلَّذِينَ يَسۡمَعُونَۘ وَٱلۡمُوۡتَىٰ يَبۡعَثُهُمُ ٱللَّهُ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "الأَعْرَافِ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَإِذۡ نَتَقۡنَا ٱلۡجَبَلَ فَوۡقَهُمۡ كَأَنَّهُۥ ظُلَّةٞ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيۡء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِنَّ كَثيرٗا مِّنَ ٱلۡأَحۡبَارِ ",
-           "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "لِّلَّذِينَ أَحۡسَنُواْ ٱلۡحُسۡنَىٰ وَزِيَادَةٞۖ ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَإِلَىٰ مَدۡيَنَ أَخَاهُمۡ شُعَيۡبٗاۚ", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوۡءِ", "أَفَمَن يَعۡلَمُ أَنَّمَآ أُنزِلَ إِلَيۡكَ مِن رَّبِّكَ ٱلۡحَقُّ", "الحِجْرِ", "وَقَالَ ٱللَّهُ لَا تَتَّخِذُوٓاْ إِلَٰهَيۡنِ ٱثۡنَيۡنِۖ ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "أَوَلَمۡ يَرَوۡاْ أَنَّ ٱللَّهَ ٱلَّذِي خَلَقَ ٱلسَّمَٰوَرَٰتِ وَٱلۡأَرۡضَ",
-           "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "طه", "الأَنْبِيَاءِ", "الحَجِّ", "المُؤْمِنُونَ", "يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ لَا تَتَّبِعُواْ خطُوَٰتِ ٱلشَّيۡطَٰنِۚ "," وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "قَالُوٓاْ أَنُؤۡمِنُ لَكَ وَٱتَّبَعَكَ ٱلۡأَرۡذَلُونَ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَقَدۡ وَصَّلۡنَا لَهُمُ ٱلۡقَوۡلِ لَعَلَّهُمۡ يَتَذَكَّرُونَ",
-           "وَلَا تُجَٰدِلُوٓاْ أَهۡلَ ٱلۡكِتَٰبِ إِلَّا بِٱلَّتِي هِيَ أَحۡسَنُ ", "وَمَن يُسۡلِمۡ وَجۡهَهُۥٓ إِلَى ٱللَّهِ وَهَوَمُحۡسِنٞ", "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِ وَتَعۡمَلۡ صَٰلِحٗا ", "قُلۡ مَن يَرۡزُقُكُم مِّنَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ ", "وَمَآ أَنزَلۡنَا عَلَىٰ قَوۡمِهِ مِنۢ بَعۡدِهِ مِن جُند", "فَنَبَذۡنَٰهُ بِٱلۡعَرَآءِ وَهُوَ سَقِيمٞ", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ وَكَذَّبَ ", "وَيَٰقَوۡمِ مَا لِيٓ أدۡعُوكُمۡ إِلَى ٱلنَّجَوٰةِ", "إِلَيۡهِ يُردُّ عِلۡمُ ٱلسَّاعَةِۚ", "قَٰلَ أَوَلَوۡ جِئۡتُكُم بِأَهۡدَىٰ",
-           " الأَحْقَافِ", "لَّقَدۡ رَضِيَ ٱللَّهُ عَنِ ٱلۡمُؤۡمِنِينَ إِذۡ يُبَايِعُونَكَ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ", "الرَّحْمـٰنِ", "المُجَادْلَةِ", "الجُمُعَةِ", "المُلكِ", "الجِنِّ","النَبَإِ","الأَعْلَى"
+            "الفَاتِحَةِ", "أَفَتَطۡمَعُونَ أَن يُؤۡمِنُواْ لَكُمۡ ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ مَا وَلَّىٰهُمۡ",
+            "وَٱذۡكُرُواْ ٱللَّهَ فِيٓ أَيَّامٖ مَّعۡدُودَٰتٍ ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "قُلۡ أَؤُنَبِّئُكُم بِخَيۡر مِّن ذَٰلِكُمۡۖ لِلَّذِينَ ٱتَّقَوۡاْ ",
+            "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "يَسۡتَبۡشِرُونَ بِنِعۡمَة مِّنَ ٱللَّهِ وَفَضۡل ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ",
+            "fَمَا لَكُمۡ فِي ٱلۡمُنَٰفِقِينَ فِئَتَيۡنِ وَٱللَّهُ أَرۡكاَسَهُم ", "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيۡءٖ ",
+            "يَعۡتَذِرُونَ إِلَيۡكُمۡ إِذَا رَجَعۡتُمۡ إِلَيۡهِمۡ ", "وَوَمَا مِن دَآبَّةٖ فِي ٱلۡأَرۡضِ ", "وَوَمَا أُبَرِّئُ نَفۡسِيٓۚ ",
+            "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ ", "ٱقۡتَرَبَ لِلنَّاسِ حِسَابُهُمۡ ", "قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ",
+            "وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا ", "أَمَّنۡ خَلَقَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ ", "ٱتۡلُ مَآ أُوحِيَ إِلَيۡكَ ",
+            "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِۦ ", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ ", "إِلَيۡهِ يُرَدُّ عِلۡمُ ٱلسَّاعَةِ ",
+            "حَـٰمٓعَسَقق ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ ", "قَدۡ سَمِعَ ٱللَّهُ قَوۡلَ ٱلَّتِي تُجَٰدِلُكَ ",
+            "تَبَٰرَكَ ٱلَّذِي بِيَدِهِ ٱلۡمُلۡكُ ", "عَمَّ يَتَسَآءَلُونَ "
         ];
+
         const surahNames = [
-            "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النُّور", "الفرقان", "الشعراء", "النَّمْل", "القصص", "العنكبوت", "الرُّوم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"
-        ];
-        const ajzaNames = [
-          "الفَاتِحَةِ", "سَيَقُولُ ٱلسُّفَهَآءُ مِنَ ٱلنَّاسِ  مَا وَلَّىٰهُمۡ", "تِلۡكَ ٱلرُّسُلُ فَضَّلۡنَا بَعۡضَهُمۡ عَلَىٰ بَعۡضٍ ", "كُلُّ ٱلطَّعَامِ كَانَ حِلّٗا لِّبَنِيٓ إِسۡرَـٰٓءِيلَ", "وَٱلۡمُحۡصَنَٰتُ مِنَ ٱلنِّسَآءِ إِلَّا مَا مَلَكَتۡ أَيۡمَٰنُكُمۡۖ ", "لَّا يُحِبُّ ٱللَّهُ ٱلۡجَهۡرَ بِٱلسُّوٓءِ مِنَ ٱلۡقَوۡلِ ", "لَتَجِدَنَّ أَشَدَّ ٱلنَّاسِ عَدَٰوَةٗ لِّلَّذِينَ ءَامَنُواْ ٱلۡيَهُودَ ", "وَلَوۡ أَنَّنَا نَزَّلۡنَآ إِلَيۡهِمُ ٱلۡمَلَـٰٓئِكَةَ وَكَلَّمَهُمُ ٱلۡمَوۡتَىٰ ", "قَالَ ٱلۡمَلأُ ٱلَّذِينَ ٱسۡتَكۡبَرُواْ مِن قَوۡمِهِۦ لَنُخۡرِجَنَّكَ ", "وَٱعۡلَمُوٓاْ أَنَّمَا غَنِمۡتُم مِّن شَيء فَأَنَّ لِلَّهِ خُمُسَهُۥ ", "إِنَّمَا ٱلسَّبِيلُ عَلَى ٱلَّذِينَ يَسۡتَـٔۡذِنُونَكَ وَهُمۡ أَغۡنِيَآءُ", "وَمَا مِن دَآبَّة فِي ٱلۡأَرۡضِ إِلَّا عَلَى ٱللَّهِ رِزۡقُهَا", "وَمَآ أُبَرِّئُ نَفۡسِيٓۚ إِنَّ ٱلنَّفۡسَ لَأَمَّارَةُۢ بِٱلسُّوۡءِ", "الحِجْرِ", "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا ", "قَالَ أَلَمۡ أَقُل لَّكَ إِنَّكَ لَن تَسۡتَطِيعَ مَعِيَ صَبۡرٗا", "الأَنْبِيَاءِ", "المُؤْمِنُونَ", " وَقَالَ ٱلَّذِينَ لَا يَرۡجُونَ لِقَآءَنَا  ", "فَمَا كَانَ جَوَابَ قوۡمِهِۦٓ إِلَّآ أَن قَالُوٓاْ", "وَلَا تُجَٰدِلُوٓاْ أَهۡلَ ٱلۡكِتَٰبِ إِلَّا بِٱلَّتِي هِيَ أَحۡسَنُ ", "وَمَن يَقۡنُتۡ مِنكُنَّ لِلَّهِ وَرَسُولِهِ وَتَعۡمَلۡ صَٰلِحٗا ", "وَمَآ أَنزَلۡنَا عَلَىٰ قَوۡمِهِۦ مِنۢ بَعۡدِهِۦ مِن جُند", "فَمَنۡ أَظۡلَمُ مِمَّن كَذَبَ عَلَى ٱللَّهِ وَكَذَّبَ ", "إِلَيۡهِ يُردُّ عِلۡمُ ٱلسَّاعَةِۚ", " الأَحْقَافِ", "قَالَ فَمَا خَطۡبُكُمۡ أَيُّهَا ٱلۡمُرۡسَلُونَ", "المُجَادْلَةِ", "المُلكِ", "النَبَإِ"
+            "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس",
+            "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه",
+            "الأنبيـاء", "الحج", "المؤمنون", "النُّور", "الفرقان", "الشعراء", "النَّمْل", "القصص", "العنكبوت", "الرُّوم",
+            "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر",
+            "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق",
+            "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة",
+            "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج",
+            "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس",
+            "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد",
+            "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات",
+            "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر",
+            "المسد", "الإخلاص", "الفلق", "الناس"
         ];
 
         const surahVersesCount = [
-            7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
-            112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
-            54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
-            14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
-            29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11,
-            11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6
+            7, 286, 200, 176, 120, 165, 206, 75, 129, 109,
+            123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
+            112, 78, 118, 64, 77, 227, 93, 88, 69, 60,
+            34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
+            54, 53, 89, 59, 37, 35, 38, 29, 18, 45,
+            60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
+            14, 11, 11, 18, 12, 12, 30, 52, 52, 44,
+            28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
+            29, 19, 36, 25, 22, 17, 19, 26, 30, 20,
+            15, 21, 11, 8, 8, 19, 5, 8, 8, 11,
+            11, 8, 3, 9, 5, 4, 7, 3, 6, 3,
+            5, 4, 5, 6
         ];
 
         const ajzaSurahsMapping = {
-          1: ["الفاتحة", "البقرة"], 2: ["البقرة"], 3: ["البقرة", "آل عمران"], 4: ["آل عمران", "النساء"], 5: ["النساء"],
-          6: ["النساء", "المائدة"], 7: ["المائدة", "الأنعام"], 8: ["الأنعام", "الأعراف"], 9: ["الأعراف", "الأنفال"], 10: ["الأنفال", "التوبة"],
-          11: ["التوبة", "يونس", "هود"], 12: ["هود", "يوسف"], 13: ["يوسف", "الرعد", "إبراهيم"], 14: ["الحجر", "النحل"], 15: ["الإسراء", "الكهف"],
-          16: ["الكهف", "مريم", "طه"], 17: ["الأنبياء", "الحج"], 18: ["المؤمنون", "النور", "الفرقان"], 19: ["الفرقان", "الشعراء", "النمل"], 20: ["النمل", "القصص", "العنكبوت"],
-          21: ["العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب"], 22: ["الأحزاب", "سبأ", "فاطر", "يس"], 23: ["يس", "الصافات", "ص", "الزمر"], 24: ["الزمر", "غافر", "فصلت"], 25: ["فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية"],
-          26: ["الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات"], 27: ["الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد"], 28: ["المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"], 29: ["الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"], 30: ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
+            1: ["الفاتحة", "البقرة"], 2: ["البقرة"], 3: ["البقرة", "آل عمران"], 4: ["آل عمران", "النساء"], 5: ["النساء"],
+            6: ["النساء", "المائدة"], 7: ["المائدة", "الأنعام"], 8: ["الأنعام", "الأعراف"], 9: ["الأعراف", "الأنفال"], 10: ["الأنفال", "التوبة"],
+            11: ["التوبة", "يونس", "هود"], 12: ["هود", "يوسف"], 13: ["يوسف", "الرعد", "إبراهيم"], 14: ["الحجر", "النحل"], 15: ["الإسراء", "الكهف"],
+            16: ["الكهف", "مريم", "طه"], 17: ["الأنبياء", "الحج"], 18: ["المؤمنون", "النور", "الفرقان"], 19: ["الفرقان", "الشعراء", "النمل"], 20: ["النمل", "القصص", "العنكبوت"],
+            21: ["العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب"], 22: ["الأحزاب", "سبأ", "فاطر", "يس"], 23: ["يس", "الصافات", "ص", "الزمر"], 24: ["الزمر", "غافر", "فصلت"],
+            25: ["فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية"], 26: ["الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات"],
+            27: ["الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد"],
+            28: ["المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"],
+            29: ["الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"],
+            30: ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
         };
 
         const ahzabSurahsMapping = {
-          "1": ["الفاتحة", "البقرة"], "2": ["البقرة"], "3": ["البقرة"], "4": ["البقرة"], "5": ["البقرة", "آل عمران"], "6": ["آل عمران"], "7": ["آل عمران", "النساء"], "8": ["النساء"], "9": ["النساء"], "10": ["النساء", "المائدة"],
-          "11": ["المائدة"], "12": ["المائدة", "الأنعام"], "13": ["الأنعام"], "14": ["الأنعام"], "15": ["الأنعام", "الأعراف"], "16": ["الأعراف"], "17": ["الأعراف"], "18": ["الأعراف", "الأنفال"], "19": ["الأنفال", "التوبة"], "20": ["التوبة"],
-          "21": ["التوبة", "يونس"], "22": ["يونس", "هود"], "23": ["هود"], "24": ["هود", "يوسف"], "25": ["يوسف", "الرعد"], "26": ["الرعد", "إبراهيم"], "27": ["الحجر", "النحل"], "28": ["النحل", "الإسراء"], "29": ["الإسراء"], "30": ["الإسراء", "الكهف"],
-          "31": ["الكهف", "مريم"], "32": ["طه"], "33": ["الأنبياء"], "34": ["الحج"], "35": ["المؤمنون"], "36": ["النور", "الفرقان"], "37": ["الفرقان", "الشعراء"], "38": ["الشعراء", "النمل"], "39": ["النمل", "القصص"], "40": ["القصص", "العنكبوت"],
-          "41": ["العنكبوت", "الروم", "لقمان"], "42": ["لقمان", "السجدة", "الأحزاب"], "43": ["الأحزاب", "سبأ"], "44": ["سبأ", "فاطر", "يس"], "45": ["يس", "الصافات"], "46": ["الصافات", "ص", "الزمر"], "47": ["الزمر", "غافر"], "48": ["غافر", "فصلت"], "49": ["فصلت", "الشورى", "الزخرف"], "50": ["الزخرف", "الدخان", "الجاثية"],
-          "51": ["الأحقاف", "محمد", "الفتح"], "52": ["الفتح", "الحجرات", "ق", "الذاريات"], "53": ["الذاريات", "الطور", "النجم", "القمر"], "54": ["الرحمن", "الواقعة", "الحديد"], "55": ["المجادلة", "الحشر", "الممتحنة", "الصف"], "56": ["الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم"], "57": ["الملك", "القلم", "الحاقة", "المعارج", "نوح"], "58": ["الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات"], "59": ["النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق"], "60": ["الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
+            "1": ["الفاتحة", "البقرة"], "2": ["البقرة"], "3": ["البقرة"], "4": ["البقرة"], "5": ["البقرة", "آل عمران"],
+            "6": ["آل عمران"], "7": ["آل عمران", "النساء"], "8": ["النساء"], "9": ["النساء"], "10": ["النساء"],
+            "11": ["النساء", "المائدة"], "12": ["المائدة"], "13": ["المائدة", "الأنعام"], "14": ["الأنعام"], "15": ["الأنعام", "الأعراف"],
+            "16": ["الأعراف"], "17": ["الأعراف", "الأنفال"], "18": ["الأنفال", "التوبة"], "19": ["التوبة"], "20": ["التوبة", "يونس"],
+            "21": ["يونس", "هود"], "22": ["هود"], "23": ["هود", "يوسف"], "24": ["يوسف", "الرعد"], "25": ["الرعد", "إبراهيم"],
+            "26": ["الحجر", "النحل"], "27": ["النحل"], "28": ["الإسراء"], "29": ["الإسراء", "الكهف"], "30": ["الكهف", "مريم"],
+            "31": ["مريم", "طه"], "32": ["طه"], "33": ["الأنبياء"], "34": ["الحج"], "35": ["المؤمنون"],
+            "36": ["النور", "الفرقان"], "37": ["الفرقان", "الشعراء"], "38": ["الشعراء", "النمل"], "39": ["النمل", "القصص"], "40": ["القصص", "العنكبوت"],
+            "41": ["العنكبوت", "الروم"], "42": ["الروم", "لقمان", "السجدة"], "43": ["الأحزاب"], "44": ["الأحزاب", "سبأ"], "45": ["سبأ", "فاطر"],
+            "46": ["فاطر", "يس"], "47": ["يس", "الصافات"], "48": ["الصافات", "ص"], "49": ["ص", "الزمر"], "50": ["الزمر", "غافر"],
+            "51": ["غافر", "فصلت"], "52": ["فصلت", "الشورى"], "53": ["الشورى", "الزخرف"], "54": ["الدخان", "الجاثية", "الأحقاف"], "55": ["محمد", "الفتح"],
+            "56": ["الحجرات", "ق", "الذاريات"], "57": ["الطور", "النجم", "القمر", "الرحمن"], "58": ["الواقعة", "الحديد"], "59": ["المجادلة", "الحشر", "الممتحنة"],
+            "60": ["الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"]
         };
 
-        let settings = { errorDeduction: 1.0, doubtDeduction: 1.0, tajweedDeduction: 0.25, confidenceDeduction: 5 };
-        let groupsList = [];
-        let currentGroupId = null;
+        const ajzaNames = Array.from({length: 30}, (_, i) => `${i + 1}`);
+
         let studentsList = [];
         let currentStudentId = null;
+        let groupsList = [{ id: 'group_default', name: 'الحلقة العامة' }];
+        let currentGroupId = 'group_default';
+        let currentSelectedIndex = null;
+        let editingAttemptIndex = null;
+        let editingGroupAttemptIndex = null;
+        let currentTheme = 'light';
         let sortOrder = 'asc';
         let currentSelectedTab = 'ajza';
-        let currentSelectedIndex = 1;
-        let editingAttemptIndex = null;
 
-        window.onload = function() {
-            initTheme();
-            loadSettings();
-            loadGroupsData();
-            loadStudentsData();
-            loadSortOrder();
-            setupGroupSurahsDropdowns();
+        // متغيّرات إحصائيات التقييم والفرز
+        let isEvalStatsActive = false;
+        let selectedScoreFilter = null;
+
+        let settings = {
+            errorDeduction: 1.0,
+            doubtDeduction: 1.0,
+            tajweedDeduction: 0.25,
+            confidenceDeduction: 5
         };
 
-        function sendDataToSketchware(actionType) {
-            if (typeof Android !== 'undefined' && Android.callAndroidBlock) {
-                let report = {
-                    action: actionType,
-                    currentStudentId: currentStudentId,
-                    totalStudents: studentsList.length,
-                    timestamp: Date.now()
-                };
-                Android.callAndroidBlock(JSON.stringify(report));
+        function sendDataToSketchware(action, extra = "") {
+            if (window.Sketchware) {
+                window.Sketchware.postMessage(JSON.stringify({ action: action, extra: extra }));
             }
-        }
-
-        function initTheme() {
-            const savedTheme = localStorage.getItem('quran_teacher_theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            document.getElementById('themeBtn').innerHTML = savedTheme === 'dark' ? '<i class="ph ph-sun"></i> مظهر فاتح' : '<i class="ph ph-moon"></i> مظهر داكن';
-        }
-
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('quran_teacher_theme', newTheme);
-            document.getElementById('themeBtn').innerHTML = newTheme === 'dark' ? '<i class="ph ph-sun"></i> مظهر فاتح' : '<i class="ph ph-moon"></i> مظهر داكن';
-        }
-
-        function loadSortOrder() {
-            sortOrder = localStorage.getItem('quran_sort_order') || 'asc';
-            document.getElementById('sortBtn').innerHTML = sortOrder === 'asc' ? '<i class="ph ph-sort-ascending"></i> ترتيب: تصاعدي' : '<i class="ph ph-sort-descending"></i> ترتيب: تـنـازلـي';
-        }
-
-        function toggleSortOrder() {
-            sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-            localStorage.setItem('quran_sort_order', sortOrder);
-            document.getElementById('sortBtn').innerHTML = sortOrder === 'asc' ? '<i class="ph ph-sort-ascending"></i> ترتيب: تصاعدي' : '<i class="ph ph-sort-descending"></i> ترتيب: تـنـازلـي';
-            renderList();
-        }
-
-        function switchTab(tab) {
-            currentSelectedTab = tab;
-            document.getElementById('tabAhzab').classList.toggle('active', tab === 'ahzab');
-            document.getElementById('tabSuwar').classList.toggle('active', tab === 'suwar');
-            document.getElementById('tabAjza').classList.toggle('active', tab === 'ajza');
-            document.getElementById('groupEvalContainer').style.display = (tab === 'suwar') ? 'block' : 'none';
-            renderList();
-        }
-
-        function loadSettings() {
-            const savedSettings = localStorage.getItem('quran_teacher_settings');
-            if (savedSettings) settings = JSON.parse(savedSettings);
-            if (settings.tajweedDeduction === undefined) settings.tajweedDeduction = 0.25;
-            if (settings.confidenceDeduction === undefined) settings.confidenceDeduction = 5;
-            
-            document.getElementById('errorDeduction').value = settings.errorDeduction;
-            document.getElementById('doubtDeduction').value = settings.doubtDeduction;
-            document.getElementById('tajweedDeduction').value = settings.tajweedDeduction;
-            document.getElementById('confidenceDeduction').value = settings.confidenceDeduction;
-        }
-
-        function saveSettings() {
-            settings.errorDeduction = parseFloat(document.getElementById('errorDeduction').value) || 0;
-            settings.doubtDeduction = parseFloat(document.getElementById('doubtDeduction').value) || 0;
-            settings.tajweedDeduction = parseFloat(document.getElementById('tajweedDeduction').value) || 0;
-            settings.confidenceDeduction = parseFloat(document.getElementById('confidenceDeduction').value) || 0;
-            localStorage.setItem('quran_teacher_settings', JSON.stringify(settings));
-            closeDialog('settingsDialog');
-            renderList();
-            sendDataToSketchware("SETTINGS_UPDATED");
         }
 
         function loadGroupsData() {
             const savedGroups = localStorage.getItem('quran_groups_list');
             if (savedGroups) {
-                groupsList = JSON.parse(savedGroups);
+                try { groupsList = JSON.parse(savedGroups); } catch(e) {}
             }
-            if (groupsList.length === 0) {
-                groupsList = [{ id: 'group_default', name: 'حلقة إفتراضية' }];
-                localStorage.setItem('quran_groups_list', JSON.stringify(groupsList));
-            }
-            
-            currentGroupId = localStorage.getItem('quran_current_group_id');
-            if (!currentGroupId || !groupsList.some(g => g.id === currentGroupId)) {
+            const savedCurGroup = localStorage.getItem('quran_current_group_id');
+            if (savedCurGroup && groupsList.some(g => g.id === savedCurGroup)) {
+                currentGroupId = savedCurGroup;
+            } else if (groupsList.length > 0) {
                 currentGroupId = groupsList[0].id;
-                localStorage.setItem('quran_current_group_id', currentGroupId);
             }
-            updateGroupSelectOptions();
+            populateGroupDropdown();
         }
 
-        function updateGroupSelectOptions() {
+        function saveGroupsToStorage() {
+            localStorage.setItem('quran_groups_list', JSON.stringify(groupsList));
+            localStorage.setItem('quran_current_group_id', currentGroupId);
+        }
+
+        function populateGroupDropdown() {
             const select = document.getElementById('groupSelect');
             select.innerHTML = '';
-            groupsList.forEach(group => {
+            groupsList.forEach(g => {
                 const opt = document.createElement('option');
-                opt.value = group.id;
-                opt.innerText = group.name;
-                if (group.id === currentGroupId) opt.selected = true;
+                opt.value = g.id;
+                opt.innerText = g.name;
+                if (g.id === currentGroupId) opt.selected = true;
                 select.appendChild(opt);
             });
         }
 
         function onGroupChanged() {
             currentGroupId = document.getElementById('groupSelect').value;
-            localStorage.setItem('quran_current_group_id', currentGroupId);
-            
-            const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
-            if (filteredStudents.length > 0) {
-                currentStudentId = filteredStudents[0].id;
-            } else {
-                currentStudentId = null;
-            }
-            localStorage.setItem('quran_current_student_id', currentStudentId);
-            
-            updateStudentSelectOptions();
+            saveGroupsToStorage();
+            updateStudentsDropdown();
             renderList();
+            renderEvalStats();
         }
 
         function addNewGroup() {
             const name = prompt("أدخل اسم الحلقة الجديدة:");
-            if (!name || name.trim() === "") return;
-            const newGroup = { id: 'group_' + Date.now(), name: name.trim() };
-            groupsList.push(newGroup);
-            localStorage.setItem('quran_groups_list', JSON.stringify(groupsList));
-            currentGroupId = newGroup.id;
-            localStorage.setItem('quran_current_group_id', currentGroupId);
-            updateGroupSelectOptions();
-            onGroupChanged();
+            if (name && name.trim()) {
+                const newId = 'group_' + Date.now();
+                groupsList.push({ id: newId, name: name.trim() });
+                currentGroupId = newId;
+                saveGroupsToStorage();
+                populateGroupDropdown();
+                updateStudentsDropdown();
+                renderList();
+                renderEvalStats();
+            }
         }
 
         function renameGroup() {
-            if (!currentGroupId) return;
             const group = groupsList.find(g => g.id === currentGroupId);
-            const newName = prompt("تعديل اسم الحلقة الحالية:", group.name);
-            if (!newName || newName.trim() === "") return;
-            group.name = newName.trim();
-            localStorage.setItem('quran_groups_list', JSON.stringify(groupsList));
-            updateGroupSelectOptions();
+            if (!group) return;
+            const newName = prompt("أدخل الاسم الجديد للحلقة:", group.name);
+            if (newName && newName.trim()) {
+                group.name = newName.trim();
+                saveGroupsToStorage();
+                populateGroupDropdown();
+            }
         }
 
         function deleteGroup() {
-            if (!currentGroupId) return;
             if (groupsList.length <= 1) {
-                alert("لا يمكن حذف الحلقة؛ يجب أن توجد حلقة واحدة على الأقل تلقائيًا.");
+                alert("لا يمكنك حذف الحلقة الوحيدة المتبقية.");
                 return;
             }
-            const group = groupsList.find(g => g.id === currentGroupId);
-            if (!confirm(`هل أنت متأكد من حذف الحلقة (${group.name})؟ سيتم حذف طلابها وسجلاتهم نهائيًا.`)) return;
-            
-            studentsList = studentsList.filter(s => (s.groupId || 'group_default') !== currentGroupId);
-            groupsList = groupsList.filter(g => g.id !== currentGroupId);
-            
-            localStorage.setItem('quran_groups_list', JSON.stringify(groupsList));
-            saveStudentsToStorage();
-            
-            currentGroupId = groupsList[0].id;
-            localStorage.setItem('quran_current_group_id', currentGroupId);
-            
-            updateGroupSelectOptions();
-            onGroupChanged();
+            if (confirm("هل أنت متأكد من حذف هذه الحلقة؟ سيتم نقل أو إبقاء الطلاب دون حلقة.")) {
+                groupsList = groupsList.filter(g => g.id !== currentGroupId);
+                currentGroupId = groupsList[0].id;
+                saveGroupsToStorage();
+                populateGroupDropdown();
+                updateStudentsDropdown();
+                renderList();
+                renderEvalStats();
+            }
         }
 
         function loadStudentsData() {
-            const savedStudents = localStorage.getItem('quran_students_list');
-            if (savedStudents) {
-                studentsList = JSON.parse(savedStudents);
-                studentsList.forEach(s => {
-                    if (!s.groupId) s.groupId = 'group_default';
-                });
+            const savedData = localStorage.getItem('quran_students_list');
+            if (savedData) {
+                try {
+                    studentsList = JSON.parse(savedData);
+                } catch(e) {
+                    studentsList = [];
+                }
             } else {
-                studentsList = [{ id: 'stu_' + Date.now(), name: 'الطالب التجريبي', groupId: 'group_default', data: {}, surahData: {}, ajzaData: {} }];
-                saveStudentsToStorage();
+                studentsList = [];
             }
             
-            currentStudentId = localStorage.getItem('quran_current_student_id');
-            const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
-            if (!currentStudentId || !filteredStudents.some(s => s.id === currentStudentId)) {
-                currentStudentId = filteredStudents.length > 0 ? filteredStudents[0].id : null;
+            studentsList.forEach(s => {
+                if (!s.groupId) s.groupId = 'group_default';
+            });
+
+            const savedCurrentId = localStorage.getItem('quran_current_student_id');
+            if (savedCurrentId && studentsList.some(s => s.id === savedCurrentId)) {
+                currentStudentId = savedCurrentId;
+            } else if (studentsList.length > 0) {
+                currentStudentId = studentsList[0].id;
+            } else {
+                currentStudentId = null;
             }
 
-            updateStudentSelectOptions();
-            renderList();
+            updateStudentsDropdown();
         }
 
         function saveStudentsToStorage() {
@@ -825,139 +845,175 @@
             }
         }
 
-        function updateStudentSelectOptions() {
-            const select = document.getElementById('studentSelect');
-            select.innerHTML = '';
-            const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
-            
-            document.getElementById('studentsCountBadge').innerText = `العدد: ${filteredStudents.length}`;
-
-            filteredStudents.forEach(student => {
-                const opt = document.createElement('option');
-                opt.value = student.id;
-                opt.innerText = student.name;
-                if (student.id === currentStudentId) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        function onStudentChanged() {
-            currentStudentId = document.getElementById('studentSelect').value;
-            localStorage.setItem('quran_current_student_id', currentStudentId);
-            renderList();
-            sendDataToSketchware("STUDENT_CHANGED");
-        }
-
-        function addNewStudent() {
-            if (!currentGroupId) {
-                alert("يرجى اختيار حلقة أو إنشاء حلقة أولاً.");
-                return;
-            }
-            const name = prompt("أدخل اسم الطالب الجديد:");
-            if (!name || name.trim() === "") return;
-            
-            const newStudent = {
-                id: 'stu_' + Date.now(),
-                name: name.trim(),
-                groupId: currentGroupId,
-                data: {},
-                surahData: {},
-                ajzaData: {}
-            };
-            
-            studentsList.push(newStudent);
-            currentStudentId = newStudent.id;
-            saveStudentsToStorage();
-            updateStudentSelectOptions();
-            renderList();
-            sendDataToSketchware("STUDENT_ADDED");
-        }
-
         function getCurrentStudentData() {
-            const student = studentsList.find(s => s.id === currentStudentId);
-            if (!student) return { data: {}, surahData: {}, ajzaData: {} };
-            if (!student.data) student.data = {};
-            if (!student.surahData) student.surahData = {};
-            if (!student.ajzaData) student.ajzaData = {};
+            let student = studentsList.find(s => s.id === currentStudentId);
+            if (student) {
+                if (!student.data) student.data = {};
+                if (!student.surahData) student.surahData = {};
+                if (!student.ajzaData) student.ajzaData = {};
+                if (!student.groupEvaluations) student.groupEvaluations = [];
+            }
             return student;
         }
 
-        function areSurahsArraysEqual(arr1, arr2) {
-            if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-            if (arr1.length !== arr2.length) return false;
-            const s1 = [...arr1].sort();
-            const s2 = [...arr2].sort();
-            return s1.every((val, index) => val === s2[index]);
-        }
+        function updateStudentsDropdown() {
+            const select = document.getElementById('studentSelect');
+            select.innerHTML = '';
 
-        function getSurahRangeArray(startIdx, endIdx) {
-            let list = [];
-            let min = Math.min(startIdx, endIdx);
-            let max = Math.max(startIdx, endIdx);
-            for (let i = min; i <= max; i++) {
-                list.push(i);
+            const currentGroupStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
+
+            if (currentGroupStudents.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = "";
+                opt.innerText = "لا يوجد طلاب في هذه الحلقة";
+                select.appendChild(opt);
+                currentStudentId = null;
+            } else {
+                currentGroupStudents.forEach(student => {
+                    const opt = document.createElement('option');
+                    opt.value = student.id;
+                    opt.innerText = student.name;
+                    select.appendChild(opt);
+                });
+
+                if (!currentStudentId || !currentGroupStudents.some(s => s.id === currentStudentId)) {
+                    currentStudentId = currentGroupStudents[0].id;
+                }
+                select.value = currentStudentId;
             }
-            return list;
+
+            document.getElementById('studentsCountBadge').innerText = `العدد: ${currentGroupStudents.length}`;
         }
 
-        function isShortSurah(index) {
-            return index >= 82 && index <= 114;
+        function onStudentChanged() {
+            const select = document.getElementById('studentSelect');
+            currentStudentId = select.value || null;
+            saveStudentsToStorage();
+            renderList();
+            renderEvalStats();
         }
 
-        function calculateProgressText(attempts) {
-            if (!attempts || attempts.length <= 1) {
-                return '<span class="progress-text" style="color:#aaa; font-weight:normal;">(المرة الأولى - لا مقارنات)</span>';
+        function addNewStudent() {
+            const name = prompt("أدخل اسم الطالب الجديد:");
+            if (name && name.trim() !== "") {
+                const newStudent = {
+                    id: 'student_' + Date.now(),
+                    name: name.trim(),
+                    groupId: currentGroupId,
+                    data: {},
+                    surahData: {},
+                    ajzaData: {},
+                    groupEvaluations: []
+                };
+                studentsList.push(newStudent);
+                currentStudentId = newStudent.id;
+                saveStudentsToStorage();
+                updateStudentsDropdown();
+                renderList();
+                renderEvalStats();
+                sendDataToSketchware("STUDENT_ADDED", name.trim());
             }
+        }
+
+        function renameStudent() {
+            if (!currentStudentId) return;
+            const student = studentsList.find(s => s.id === currentStudentId);
+            if (student) {
+                const newName = prompt("تعديل اسم الطالب:", student.name);
+                if (newName && newName.trim() !== "") {
+                    student.name = newName.trim();
+                    saveStudentsToStorage();
+                    updateStudentsDropdown();
+                    sendDataToSketchware("STUDENT_RENAMED", newName.trim());
+                }
+            }
+        }
+
+        function deleteStudent() {
+            if (!currentStudentId) return;
+            const student = studentsList.find(s => s.id === currentStudentId);
+            if (student && confirm(`هل أنت متأكد من حذف الطالب "${student.name}" مع جميع بياناته؟`)) {
+                studentsList = studentsList.filter(s => s.id !== currentStudentId);
+                const currentGroupStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
+                currentStudentId = currentGroupStudents.length > 0 ? currentGroupStudents[0].id : null;
+                saveStudentsToStorage();
+                updateStudentsDropdown();
+                renderList();
+                renderEvalStats();
+                sendDataToSketchware("STUDENT_DELETED");
+            }
+        }
+
+        function switchTab(tab) {
+            currentSelectedTab = tab;
+            document.getElementById('tabAjza').classList.toggle('active', tab === 'ajza');
+            document.getElementById('tabAhzab').classList.toggle('active', tab === 'ahzab');
+            document.getElementById('tabSuwar').classList.toggle('active', tab === 'suwar');
+
+            const groupContainer = document.getElementById('groupEvalContainer');
+            if (tab === 'suwar') {
+                groupContainer.style.display = 'block';
+            } else {
+                groupContainer.style.display = 'none';
+            }
+
+            renderList();
+            renderEvalStats();
+        }
+
+        function areSurahsArraysEqual(a, b) {
+            if (!a && !b) return true;
+            if (!a || !b) return false;
+            if (a.length !== b.length) return false;
+            const sortedA = [...a].sort();
+            const sortedB = [...b].sort();
+            return sortedA.every((val, index) => val === sortedB[index]);
+        }
+
+        function calculateProgressHTML(attempts) {
+            if (!attempts || attempts.length === 0) return '';
             
             const currentAttempt = attempts[attempts.length - 1];
+            
             let previousAttempt = null;
-            let relationType = 'none';
+            let relationType = 'same'; 
 
-            for (let i = attempts.length - 2; i >= 0; i--) {
-                const att = attempts[i];
-                
-                if (currentSelectedTab === 'suwar') {
-                    if (currentAttempt.isGroup && att.isGroup) {
+            if (currentSelectedTab === 'suwar') {
+                const currentType = currentAttempt.scopeType || 'all';
+                for (let i = attempts.length - 2; i >= 0; i--) {
+                    const att = attempts[i];
+                    const attType = att.scopeType || 'all';
+                    if (currentType === 'verses' && attType === 'verses') {
+                        if (currentAttempt.verseStart === att.verseStart && currentAttempt.verseEnd === att.verseEnd) {
+                            previousAttempt = att;
+                            break;
+                        }
+                    } else if (currentType === 'all' && attType === 'all') {
                         previousAttempt = att;
                         break;
-                    } else if (!currentAttempt.isGroup && !att.isGroup) {
-                        const currentType = currentAttempt.scopeType || 'all';
-                        const attType = att.scopeType || 'all';
-                        
-                        if (currentType === attType) {
-                            if (currentType === 'verses') {
-                                if (currentAttempt.verseStart === att.verseStart && currentAttempt.verseEnd === att.verseEnd) {
-                                    previousAttempt = att;
-                                    break;
-                                }
-                            } else {
-                                previousAttempt = att;
-                                break;
-                            }
-                        }
                     }
-                } else {
-                    const currentType = currentAttempt.scopeType || 'all';
+                }
+            } else {
+                const currentType = currentAttempt.scopeType || 'all';
+                for (let i = attempts.length - 2; i >= 0; i--) {
+                    const att = attempts[i];
                     const attType = att.scopeType || 'all';
 
                     if (currentType === 'all' && attType === 'all') {
                         previousAttempt = att;
                         break;
-                    }
-                    else if (currentType === 'unmemorized' && attType === 'unmemorized') {
+                    } else if (currentType === 'unmemorized' && attType === 'unmemorized') {
                         if (areSurahsArraysEqual(currentAttempt.unmemorizedSurahs, att.unmemorizedSurahs)) {
                             previousAttempt = att;
                             break;
                         }
-                    }
-                    else if (attType === 'unmemorized' && currentType === 'all') {
+                    } else if (attType === 'unmemorized' && currentType === 'all') {
                         previousAttempt = att;
-                        relationType = 'toAll';
+                        relationType = 'toAll'; 
                         break;
-                    }
-                    else if (attType === 'all' && currentType === 'unmemorized') {
+                    } else if (attType === 'all' && currentType === 'unmemorized') {
                         previousAttempt = att;
-                        relationType = 'toUnmemorized';
+                        relationType = 'toUnmemorized'; 
                         break;
                     }
                 }
@@ -966,63 +1022,198 @@
             if (!previousAttempt) {
                 return '<span class="progress-text" style="color:#aaa; font-weight:normal;">(لا مقارنات عادلة متوفرة)</span>';
             }
-            
+
             let currentScoreForCalc = currentAttempt.score;
             let previousScoreForCalc = previousAttempt.score;
 
-            if (currentSelectedTab === 'suwar' && currentAttempt.isGroup && previousAttempt.isGroup) {
-                const curRange = getSurahRangeArray(currentAttempt.startSurahIdx, currentAttempt.endSurahIdx);
-                const prevRange = getSurahRangeArray(previousAttempt.startSurahIdx, previousAttempt.endSurahIdx);
-                
-                let isIdentical = curRange.length === prevRange.length && curRange.every((v, idx) => v === prevRange[idx]);
-                
-                if (!isIdentical) {
-                    let hiddenBonus = 0;
-                    curRange.forEach(sIdx => {
-                        if (!prevRange.includes(sIdx)) {
-                            hiddenBonus += isShortSurah(sIdx) ? 0.5 : 2.0;
-                        }
-                    });
-                    prevRange.forEach(sIdx => {
-                        if (!curRange.includes(sIdx)) {
-                            hiddenBonus -= isShortSurah(sIdx) ? 0.5 : 2.0;
-                        }
-                    });
-                    currentScoreForCalc += hiddenBonus;
-                }
-            } else {
-                if (relationType === 'toAll') {
-                    let unmemorizedCount = 0;
-                    if (previousAttempt.unmemorizedSurahs && Array.isArray(previousAttempt.unmemorizedSurahs)) {
-                        unmemorizedCount = previousAttempt.unmemorizedSurahs.length;
-                    }
-                    const hiddenBonus = unmemorizedCount * 2;
-                    currentScoreForCalc += hiddenBonus;
-                } 
-                else if (relationType === 'toUnmemorized') {
-                    let currentUnmemorizedCount = 0;
-                    if (currentAttempt.unmemorizedSurahs && Array.isArray(currentAttempt.unmemorizedSurahs)) {
-                        currentUnmemorizedCount = currentAttempt.unmemorizedSurahs.length;
-                    }
-                    const hiddenPenalty = currentUnmemorizedCount * 2;
-                    currentScoreForCalc -= hiddenPenalty;
-                }
+            if (currentSelectedTab === 'suwar' && currentAttempt.scopeType === 'verses') {
+                const vCount = (currentAttempt.verseEnd - currentAttempt.verseStart) + 1;
+                const errors = currentAttempt.errors || 0;
+                const doubts = currentAttempt.doubts || 0;
+                const tajweed = currentAttempt.tajweedErrors || 0;
+
+                let deduction = errors * settings.errorDeduction;
+                deduction += (doubts / 2) * settings.doubtDeduction;
+                deduction += tajweed * (settings.tajweedDeduction || 0.25);
+
+                const totalVerses = surahVersesCount[currentSelectedIndex - 1] || 100;
+                const fullProportionalScore = 10 - (deduction * (totalVerses / vCount));
+                currentScoreForCalc = Math.max(0, Math.round(fullProportionalScore * 10) / 10);
             }
 
-            const diff = currentScoreForCalc - previousScoreForCalc;
+            if (currentSelectedTab === 'suwar' && previousAttempt.scopeType === 'verses') {
+                const vCount = (previousAttempt.verseEnd - previousAttempt.verseStart) + 1;
+                const errors = previousAttempt.errors || 0;
+                const doubts = previousAttempt.doubts || 0;
+                const tajweed = previousAttempt.tajweedErrors || 0;
 
-            if (diff === 0) {
-                return '<span class="progress-text prog-stable">لم يتغير <i class="ph ph-minus"></i></span>';
-            } else if (diff > 0) {
-                if (diff <= 2) return '<span class="progress-text prog-up-light">تحسن قليلاً <i class="ph ph-trend-up"></i></span>';
-                if (diff <= 4) return '<span class="progress-text prog-up-medium">تحسن نوعاً ما <i class="ph ph-sparkle"></i></span>';
-                return '<span class="progress-text prog-up-heavy">تحسن كثيراً <i class="ph ph-fire"></i></span>';
-            } else {
+                let deduction = errors * settings.errorDeduction;
+                deduction += (doubts / 2) * settings.doubtDeduction;
+                deduction += tajweed * (settings.tajweedDeduction || 0.25);
+
+                const totalVerses = surahVersesCount[currentSelectedIndex - 1] || 100;
+                const fullProportionalScore = 10 - (deduction * (totalVerses / vCount));
+                previousScoreForCalc = Math.max(0, Math.round(fullProportionalScore * 10) / 10);
+            }
+
+            if (relationType === 'toAll') {
+                const totalInJuz = currentSelectedTab === 'ahzab' ? 
+                    (ahzabSurahsMapping[currentSelectedIndex] ? ahzabSurahsMapping[currentSelectedIndex].length : 1) : 
+                    (ajzaSurahsMapping[currentSelectedIndex] ? ajzaSurahsMapping[currentSelectedIndex].length : 1);
+                
+                const unmemCount = previousAttempt.unmemorizedSurahs ? previousAttempt.unmemorizedSurahs.length : 0;
+                const prevTestedCount = Math.max(1, totalInJuz - unmemCount);
+                
+                const prevErrors = previousAttempt.errors || 0;
+                const prevDoubts = previousAttempt.doubts || 0;
+                const prevTajweed = previousAttempt.tajweedErrors || 0;
+                let prevDed = prevErrors * settings.errorDeduction + (prevDoubts / 2) * settings.doubtDeduction + prevTajweed * (settings.tajweedDeduction || 0.25);
+                
+                const normalizedPrevScore = 10 - (prevDed * (totalInJuz / prevTestedCount));
+                previousScoreForCalc = Math.max(0, Math.round(normalizedPrevScore * 10) / 10);
+            }
+
+            if (relationType === 'toUnmemorized') {
+                const totalInJuz = currentSelectedTab === 'ahzab' ? 
+                    (ahzabSurahsMapping[currentSelectedIndex] ? ahzabSurahsMapping[currentSelectedIndex].length : 1) : 
+                    (ajzaSurahsMapping[currentSelectedIndex] ? ajzaSurahsMapping[currentSelectedIndex].length : 1);
+                
+                const unmemCount = currentAttempt.unmemorizedSurahs ? currentAttempt.unmemorizedSurahs.length : 0;
+                const curTestedCount = Math.max(1, totalInJuz - unmemCount);
+                
+                const curErrors = currentAttempt.errors || 0;
+                const curDoubts = currentAttempt.doubts || 0;
+                const curTajweed = currentAttempt.tajweedErrors || 0;
+                let curDed = curErrors * settings.errorDeduction + (curDoubts / 2) * settings.doubtDeduction + curTajweed * (settings.tajweedDeduction || 0.25);
+                
+                const normalizedCurScore = 10 - (curDed * (totalInJuz / curTestedCount));
+                currentScoreForCalc = Math.max(0, Math.round(normalizedCurScore * 10) / 10);
+            }
+
+            const diff = Math.round((currentScoreForCalc - previousScoreForCalc) * 10) / 10;
+
+            if (diff > 0) {
+                if (diff >= 2.0) {
+                    return `<span class="progress-text prog-up-heavy"><i class="ph ph-trend-up"></i> ارتفاع ممتاز (+${diff})</span>`;
+                } else if (diff >= 1.0) {
+                    return `<span class="progress-text prog-up-medium"><i class="ph ph-trend-up"></i> تحسن جيد جداً (+${diff})</span>`;
+                } else {
+                    return `<span class="progress-text prog-up-light"><i class="ph ph-trend-up"></i> تحسن طفيف (+${diff})</span>`;
+                }
+            } else if (diff < 0) {
                 const absDiff = Math.abs(diff);
-                if (absDiff <= 2) return '<span class="progress-text prog-down-light">ساء قليلاً <i class="ph ph-trend-down"></i></span>';
-                if (absDiff <= 4) return '<span class="progress-text prog-down-medium">ساء نوعاً ما <i class="ph ph-warning"></i></span>';
-                return '<span class="progress-text prog-down-heavy">ساء كثيراً <i class="ph ph-warning-octagon"></i></span>';
+                if (absDiff >= 2.0) {
+                    return `<span class="progress-text prog-down-heavy"><i class="ph ph-trend-down"></i> تراجع كبير (-${absDiff})</span>`;
+                } else if (absDiff >= 1.0) {
+                    return `<span class="progress-text prog-down-medium"><i class="ph ph-trend-down"></i> تراجع متوسط (-${absDiff})</span>`;
+                } else {
+                    return `<span class="progress-text prog-down-light"><i class="ph ph-trend-down"></i> تراجع طفيف (-${absDiff})</span>`;
+                }
+            } else {
+                return `<span class="progress-text prog-stable"><i class="ph ph-minus"></i> مستوى أداء مستقر (0)</span>`;
             }
+        }
+
+        // إحصائيات التقييم الجانبية
+        function toggleEvalStats() {
+            isEvalStatsActive = !isEvalStatsActive;
+            const container = document.getElementById('evalStatsCardsContainer');
+            const btn = document.getElementById('evalStatsToggleBtn');
+            if (isEvalStatsActive) {
+                container.style.display = 'flex';
+                btn.classList.add('btn-warning');
+                btn.classList.remove('btn-secondary');
+                selectedScoreFilter = null;
+                renderEvalStats();
+            } else {
+                container.style.display = 'none';
+                btn.classList.remove('btn-warning');
+                btn.classList.add('btn-secondary');
+                selectedScoreFilter = null;
+                renderList();
+            }
+        }
+
+        function renderEvalStats() {
+            if (!isEvalStatsActive) return;
+            const container = document.getElementById('evalStatsCardsContainer');
+            container.innerHTML = '';
+
+            if (!currentStudentId || studentsList.length === 0 || studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId).length === 0) {
+                container.innerHTML = '<div style="font-size:13px; color:#94a3b8; padding:8px;">لا يوجد طالب محدد لحساب الإحصائيات.</div>';
+                return;
+            }
+
+            const student = getCurrentStudentData();
+            let targetData, namesArray, totalCount, prefixLabel;
+
+            if (currentSelectedTab === 'ahzab') {
+                targetData = student.data || {};
+                namesArray = juzNames;
+                totalCount = 60;
+                prefixLabel = "الحزب";
+            } else if (currentSelectedTab === 'suwar') {
+                targetData = student.surahData || {};
+                namesArray = surahNames;
+                totalCount = 114;
+                prefixLabel = "سورة";
+            } else {
+                targetData = student.ajzaData || {};
+                namesArray = ajzaNames;
+                totalCount = 30;
+                prefixLabel = "الجزء";
+            }
+
+            const scoreMap = {};
+
+            for (let i = 1; i <= totalCount; i++) {
+                const attempts = targetData[i];
+                if (attempts && attempts.length > 0) {
+                    const lastAttempt = attempts[attempts.length - 1];
+                    if (lastAttempt && typeof lastAttempt.score === 'number') {
+                        const score = lastAttempt.score;
+                        if (!scoreMap[score]) {
+                            scoreMap[score] = [];
+                        }
+                        scoreMap[score].push({
+                            index: i,
+                            name: `${prefixLabel} ${namesArray[i - 1]}`
+                        });
+                    }
+                }
+            }
+
+            const scores = Object.keys(scoreMap).map(Number).sort((a, b) => a - b);
+
+            if (scores.length === 0) {
+                container.innerHTML = '<div style="font-size:13px; color:#94a3b8; padding:8px; white-space:normal;">لا توجد تقييمات مسجلة بعد في هذا القسم.</div>';
+                return;
+            }
+
+            scores.forEach(score => {
+                const items = scoreMap[score];
+                const card = document.createElement('div');
+                card.className = 'eval-stat-card' + (selectedScoreFilter === score ? ' active-filter' : '');
+                
+                let itemsHTML = items.map(it => `<div class="eval-stat-item">${it.name}</div>`).join('');
+                
+                card.innerHTML = `
+                    <div class="eval-stat-score">${score}/10</div>
+                    <div style="max-height:100px; overflow-y:auto; width:100%;">${itemsHTML}</div>
+                `;
+
+                card.onclick = () => {
+                    if (selectedScoreFilter === score) {
+                        selectedScoreFilter = null;
+                    } else {
+                        selectedScoreFilter = score;
+                    }
+                    renderEvalStats();
+                    renderList();
+                };
+
+                container.appendChild(card);
+            });
         }
 
         function renderList() {
@@ -1035,65 +1226,63 @@
             }
 
             const student = getCurrentStudentData();
+
             let targetData, namesArray, totalCount, prefixLabel;
-            
+
             if (currentSelectedTab === 'ahzab') {
-                targetData = student.data; namesArray = juzNames; totalCount = 60; prefixLabel = "الحزب";
+                targetData = student.data;
+                namesArray = juzNames;
+                totalCount = 60;
+                prefixLabel = "الحزب";
             } else if (currentSelectedTab === 'suwar') {
-                targetData = student.surahData; namesArray = surahNames; totalCount = 114; prefixLabel = "سورة";
+                targetData = student.surahData;
+                namesArray = surahNames;
+                totalCount = 114;
+                prefixLabel = "سورة";
             } else {
-                targetData = student.ajzaData; namesArray = ajzaNames; totalCount = 30; prefixLabel = "الجزء";
+                targetData = student.ajzaData;
+                namesArray = ajzaNames;
+                totalCount = 30;
+                prefixLabel = "الجزء";
             }
 
             let indexes = [];
             for (let i = 1; i <= totalCount; i++) indexes.push(i);
+
             if (sortOrder === 'desc') indexes.reverse();
 
             indexes.forEach(i => {
+                const attempts = targetData[i] || [];
+                const hasAttempts = attempts.length > 0;
+                const lastAttempt = hasAttempts ? attempts[attempts.length - 1] : null;
+
+                // التصفية عبر كروت إحصائيات التقييم إن وُجدت
+                if (selectedScoreFilter !== null) {
+                    if (!lastAttempt || lastAttempt.score !== selectedScoreFilter) {
+                        return;
+                    }
+                }
+
                 const card = document.createElement('div');
                 card.className = 'juz-card';
                 card.onclick = () => openEvaluation(i);
 
-                let statusHTML = '<span style="color:#888; font-size:14px;">لم يُسمّع</span>';
-                let scoreHTML = '';
+                let badgeHTML = '';
                 let borderClass = '';
-                let versesScopeHTML = ''; 
-                let unmemorizedHTML = ''; 
-                let problemPagesHTML = '';
-                let problemSurahsHTML = '';
-                
-                if (targetData[i] && targetData[i].length > 0) {
-                    const attempts = targetData[i];
-                    const lastAttempt = attempts[attempts.length - 1];
+                let scoreText = '';
+                let confidenceSectionHTML = '';
+                let scopeBadge = '';
+                let progressHTML = '';
+
+                if (hasAttempts) {
                     const score = lastAttempt.score;
-                    
-                    if (currentSelectedTab === 'suwar' && !lastAttempt.isGroup && lastAttempt.scopeType === 'verses' && lastAttempt.verseStart && lastAttempt.verseEnd) {
-                        versesScopeHTML = `<div style="color: #2980b9; font-weight: bold; font-size: 13px; margin-top: 2px;">من ${lastAttempt.verseStart} إلى ${lastAttempt.verseEnd}</div>`;
-                    }
+                    scoreText = `${score} / 10`;
 
-                    if (currentSelectedTab === 'suwar' && lastAttempt.problemPages && lastAttempt.problemPages.length > 0) {
-                        problemPagesHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">الصفحات التي بها إشكال: ${lastAttempt.problemPages.join('، ')}</div>`;
-                    }
-
-                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.scopeType === 'unmemorized' && lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
-                        unmemorizedHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 13px; margin-top: 2px;">بإستثناء: ${lastAttempt.unmemorizedSurahs.join('، ')} (لم يحفظ)</div>`;
-                    }
-
-                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
-                        problemSurahsHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">سور بها إشكال: ${lastAttempt.problemSurahs.join('، ')}</div>`;
-                    }
-
-                    let badgeClass = '';
-                    let statusText = '';
-                    let confidenceSectionHTML = '';
-                    let progressHTML = '';
-
-                    if (currentSelectedTab === 'suwar' && lastAttempt.isGroup) {
-                        badgeClass = 'status-group-label';
+                    if (lastAttempt.isGroupEval) {
+                        badgeHTML = `<span class="status-badge status-group-label">تسميع مجموعة</span>`;
                         borderClass = 'border-group-label';
-                        statusText = lastAttempt.groupRangeText;
                         
-                        let groupAddons = "";
+                        let groupAddons = '';
                         if (lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
                             groupAddons += `<div style="color: var(--danger-color); font-weight: bold; font-size: 11px;">لم تُحفظ: ${lastAttempt.unmemorizedSurahs.join('، ')}</div>`;
                         }
@@ -1120,45 +1309,127 @@
                             confidenceColor = '#c0392b';
                         }
 
-                        if (score > 7.5) { badgeClass = 'status-excellent'; borderClass = 'border-excellent'; statusText = 'ممتاز'; }
-                        else if (score > 5.0) { badgeClass = 'status-very-good'; borderClass = 'border-very-good'; statusText = 'جيد جداً'; }
-                        else if (score > 2.5) { badgeClass = 'status-good'; borderClass = 'border-good'; statusText = 'جيد'; }
-                        else { badgeClass = 'status-not-memorized'; borderClass = 'border-not-memorized'; statusText = 'لم يحفظ'; }
+                        if (score > 9) {
+                            badgeHTML = `<span class="status-badge status-excellent">ممتاز</span>`;
+                            borderClass = 'border-excellent';
+                        } else if (score >= 8.5) {
+                            badgeHTML = `<span class="status-badge status-very-good">جيد جداً</span>`;
+                            borderClass = 'border-very-good';
+                        } else if (score >= 7) {
+                            badgeHTML = `<span class="status-badge status-good">جيد</span>`;
+                            borderClass = 'border-good';
+                        } else {
+                            badgeHTML = `<span class="status-badge status-not-memorized">ضعيف</span>`;
+                            borderClass = 'border-not-memorized';
+                        }
 
-                        confidenceSectionHTML = `<div class="confidence-level" style="color: ${confidenceColor};"><i class="ph ph-shield-check"></i> مستوى الثقة: ${confidenceScore}%</div>`;
-                        progressHTML = calculateProgressText(attempts);
+                        let addonsHTML = '';
+                        if (currentSelectedTab === 'suwar' && lastAttempt.problemPages && lastAttempt.problemPages.length > 0) {
+                            const pagesStr = lastAttempt.problemPages.map(p => `ص${p.page}`).join('، ');
+                            addonsHTML += `<div style="color: var(--warning-color); font-weight: bold; font-size: 11px;">صفحات بها إشكال: ${pagesStr}</div>`;
+                        }
+                        if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
+                            const surahsStr = lastAttempt.problemSurahs.join('، ');
+                            addonsHTML += `<div style="color: var(--warning-color); font-weight: bold; font-size: 11px;">سور بها إشكال: ${surahsStr}</div>`;
+                        }
+
+                        confidenceSectionHTML = `
+                            <div class="confidence-level" style="color: ${confidenceColor};">
+                                <i class="ph ph-shield-check"></i> نسبة الثقة: ${confidenceScore}%
+                            </div>
+                            ${addonsHTML}
+                        `;
+
+                        progressHTML = calculateProgressHTML(attempts);
                     }
 
-                    card.classList.add(borderClass);
-                    statusHTML = `<span class="status-badge ${badgeClass}">${statusText}</span>`;
-                    
-                    scoreHTML = `
-                        <span class="last-score">آخر تقييم: ${score}/10 (المحاولات: ${attempts.length})</span>
-                        ${versesScopeHTML}
-                        ${problemPagesHTML}
-                        ${unmemorizedHTML}
-                        ${problemSurahsHTML}
-                        ${confidenceSectionHTML}
-                        ${progressHTML}
-                    `;
+                    if (currentSelectedTab === 'suwar' && lastAttempt.scopeType === 'verses') {
+                        scopeBadge = `<span style="font-size:11px; color:var(--accent-color); font-weight:bold;">(آية ${lastAttempt.verseStart} - ${lastAttempt.verseEnd})</span>`;
+                    } else if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.scopeType === 'unmemorized' && lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
+                        scopeBadge = `<div style="font-size:11px; color:var(--danger-color); font-weight:bold;">لم تُحفظ: ${lastAttempt.unmemorizedSurahs.join('، ')}</div>`;
+                    }
+                } else {
+                    badgeHTML = `<span class="status-badge status-not-memorized">لم يُسمّع</span>`;
+                    borderClass = 'border-not-memorized';
+                    scoreText = 'غير مقيم';
+                    confidenceSectionHTML = `<div class="confidence-level" style="color: #94a3b8;">نسبة الثقة: --</div>`;
+                    progressHTML = '';
                 }
 
-                const numLabel = (currentSelectedTab === 'ajza') ? `الجزء ${i}` : `${prefixLabel} ${i}`;
+                card.classList.add(borderClass);
+
+                const numberLabel = currentSelectedTab === 'suwar' ? `السورة ${i}` : (currentSelectedTab === 'ahzab' ? `الحزب ${i}` : `الجزء ${i}`);
 
                 card.innerHTML = `
                     <div class="juz-info">
-                        <span class="juz-number">${numLabel}</span>
+                        <span class="juz-number">${numberLabel}</span>
                         <span class="juz-name quran-font">${namesArray[i-1]}</span>
-                        ${scoreHTML}
+                        ${scopeBadge}
+                        <span class="last-score">آخر تقييم: <strong>${scoreText}</strong></span>
+                        ${confidenceSectionHTML}
+                        ${progressHTML}
                     </div>
-                    <div>${statusHTML}</div>
+                    <div>
+                        ${badgeHTML}
+                    </div>
                 `;
+
                 container.appendChild(card);
             });
         }
 
-        function openSettings() { document.getElementById('settingsDialog').showModal(); }
-        function closeDialog(id) { document.getElementById(id).close(); }
+        function setupSurahVersesDropdowns(surahIdx) {
+            const startSelect = document.getElementById('verseStart');
+            const endSelect = document.getElementById('verseEnd');
+            const totalVerses = surahVersesCount[surahIdx - 1] || 100;
+
+            startSelect.innerHTML = '';
+            for (let v = 1; v <= totalVerses; v++) {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.innerText = v;
+                startSelect.appendChild(opt);
+            }
+            startSelect.value = 1;
+
+            onVerseStartChanged();
+        }
+
+        function setupJuzAhzabUnmemorizedDropdowns(index) {
+            const multiSelect = document.getElementById('unmemorizedSurahs');
+            const multiProb = document.getElementById('juzProblemSurahsSelect');
+            multiSelect.innerHTML = '';
+            multiProb.innerHTML = '';
+
+            let surahs = [];
+            if (currentSelectedTab === 'ahzab') {
+                surahs = ahzabSurahsMapping[index] || [];
+            } else if (currentSelectedTab === 'ajza') {
+                surahs = ajzaSurahsMapping[index] || [];
+            }
+
+            surahs.forEach(sName => {
+                const opt1 = document.createElement('option');
+                opt1.value = sName;
+                opt1.innerText = sName;
+                multiSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = sName;
+                opt2.innerText = sName;
+                multiProb.appendChild(opt2);
+            });
+        }
+
+        function onSurahScopeTypeChanged() {
+            const type = document.getElementById('surahScopeType').value;
+            document.getElementById('versesPickers').style.display = type === 'verses' ? 'flex' : 'none';
+        }
+
+        function onJuzAhzabScopeTypeChanged() {
+            const type = document.getElementById('juzAhzabScopeType').value;
+            document.getElementById('unmemorizedSurahsPicker').style.display = type === 'unmemorized' ? 'block' : 'none';
+        }
 
         function toggleProblemPages() {
             const enabled = document.getElementById('enableProblemPages').checked;
@@ -1167,17 +1438,6 @@
             if (enabled && document.getElementById('problemPagesList').children.length === 0) {
                 addProblemPageField();
             }
-        }
-
-        function addProblemPageField(pageVal = '') {
-            const list = document.getElementById('problemPagesList');
-            const div = document.createElement('div');
-            div.className = 'page-input-row';
-            div.innerHTML = `
-                <input type="number" class="problem-page-input" min="1" max="604" value="${pageVal}" placeholder="رقم الصفحة" style="flex:1; padding:6px; border-radius:6px; border:1px solid var(--border-color); font-size:13px; background:var(--bg-color); color:var(--text-color);">
-                <button type="button" class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; min-width: auto; flex: 0;" onclick="this.parentElement.remove()"><i class="ph ph-trash"></i></button>
-            `;
-            list.appendChild(div);
         }
 
         function toggleJuzProblemSurahs() {
@@ -1211,42 +1471,46 @@
             document.getElementById('btnSaveEval').innerText = "تسجيل المحاولة";
 
             let namesArray, prefixLabel;
+            if (currentSelectedTab === 'ahzab') {
+                namesArray = juzNames;
+                prefixLabel = "تسميع حزب";
+            } else if (currentSelectedTab === 'suwar') {
+                namesArray = surahNames;
+                prefixLabel = "تسميع سورة";
+            } else {
+                namesArray = ajzaNames;
+                prefixLabel = "تسميع جزء";
+            }
 
-            if (currentSelectedTab === 'ahzab') { namesArray = juzNames; prefixLabel = "تسميع حزب"; }
-            else if (currentSelectedTab === 'suwar') { namesArray = surahNames; prefixLabel = "تسميع سورة"; }
-            else { namesArray = ajzaNames; prefixLabel = "تسميع جزء"; }
+            document.getElementById('evalDialogTitle').innerHTML = `
+                ${prefixLabel}: <span class="quran-font" style="color:var(--accent-color)">${namesArray[index-1]}</span>
+            `;
 
-            document.getElementById('evalDialogTitle').innerHTML = ` ${prefixLabel}: <span class="quran-font" style="color:var(--accent-color)">${namesArray[index-1]}</span>`;
-            
             const versesBlock = document.getElementById('surahVersesBlock');
             const juzAhzabBlock = document.getElementById('juzAhzabScopeBlock');
-            
-            document.getElementById('enableProblemPages').checked = false;
-            document.getElementById('problemPagesContainer').style.display = 'none';
-            document.getElementById('problemPagesList').innerHTML = '';
-
-            document.getElementById('enableJuzProblemSurahs').checked = false;
-            document.getElementById('juzProblemSurahsContainer').style.display = 'none';
-
-            document.getElementById('enablePreviousDate').checked = false;
-            document.getElementById('previousDateBlock').style.display = 'none';
-            const todayStr = new Date().toISOString().split('T')[0];
-            document.getElementById('customEvalDate').value = todayStr;
 
             if (currentSelectedTab === 'suwar') {
                 versesBlock.style.display = 'block';
                 juzAhzabBlock.style.display = 'none';
                 document.getElementById('surahScopeType').value = 'all';
-                document.getElementById('versesPickers').style.display = 'none';
-                setupVersesDropdowns(index);
+                onSurahScopeTypeChanged();
+                setupSurahVersesDropdowns(index);
+                document.getElementById('enableProblemPages').checked = false;
+                document.getElementById('problemPagesContainer').style.display = 'none';
+                document.getElementById('problemPagesList').innerHTML = '';
             } else {
                 versesBlock.style.display = 'none';
                 juzAhzabBlock.style.display = 'block';
                 document.getElementById('juzAhzabScopeType').value = 'all';
-                document.getElementById('unmemorizedSurahsPicker').style.display = 'none';
-                setupUnmemorizedSurahsDropdown(index);
-                setupJuzProblemSurahsDropdown(index);
+                onJuzAhzabScopeTypeChanged();
+                setupJuzAhzabUnmemorizedDropdowns(index);
+                document.getElementById('enableJuzProblemSurahs').checked = false;
+                document.getElementById('juzProblemSurahsContainer').style.display = 'none';
             }
+
+            document.getElementById('enablePreviousDate').checked = false;
+            document.getElementById('previousDateBlock').style.display = 'none';
+            document.getElementById('customEvalDate').value = '';
 
             document.getElementById('errorsCount').value = 0;
             document.getElementById('doubtsCount').value = 0;
@@ -1257,15 +1521,15 @@
             document.getElementById('evaluationDialog').showModal();
         }
 
-        function editSpecificAttempt(itemIndex, attemptArrayId) {
+        function editAttempt(attemptIdx) {
             const student = getCurrentStudentData();
-            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
-            
-            const attempt = targetData[itemIndex][attemptArrayId];
+            let targetData = currentSelectedTab === 'ahzab' ? student.data : (currentSelectedTab === 'suwar' ? student.surahData : student.ajzaData);
+            const attempts = targetData[currentSelectedIndex] || [];
+            const attempt = attempts[attemptIdx];
             if (!attempt) return;
 
-            editingAttemptIndex = attemptArrayId;
-            document.getElementById('btnSaveEval').innerText = "حفظ التعديلات";
+            editingAttemptIndex = attemptIdx;
+            document.getElementById('btnSaveEval').innerText = "تحديث المحاولة";
 
             document.getElementById('errorsCount').value = attempt.errors || 0;
             document.getElementById('doubtsCount').value = attempt.doubts || 0;
@@ -1273,43 +1537,40 @@
             document.getElementById('tajweedCount').value = attempt.tajweedErrors || 0;
 
             if (currentSelectedTab === 'suwar') {
-                document.getElementById('surahScopeType').value = attempt.scopeType || 'all';
+                const scopeType = attempt.scopeType || 'all';
+                document.getElementById('surahScopeType').value = scopeType;
                 onSurahScopeTypeChanged();
-                if (attempt.scopeType === 'verses') {
+                if (scopeType === 'verses') {
                     document.getElementById('verseStart').value = attempt.verseStart || 1;
                     onVerseStartChanged();
                     document.getElementById('verseEnd').value = attempt.verseEnd || 1;
                 }
-                
-                // إظهار الصفحات التي بها إشكال بانتظام عند التعديل
                 if (attempt.problemPages && attempt.problemPages.length > 0) {
                     document.getElementById('enableProblemPages').checked = true;
-                    toggleProblemPages();
-                    document.getElementById('problemPagesList').innerHTML = '';
-                    attempt.problemPages.forEach(p => addProblemPageField(p));
-                } else {
-                    document.getElementById('enableProblemPages').checked = false;
-                    document.getElementById('problemPagesContainer').style.display = 'none';
+                    document.getElementById('problemPagesContainer').style.display = 'block';
+                    const list = document.getElementById('problemPagesList');
+                    list.innerHTML = '';
+                    attempt.problemPages.forEach(p => {
+                        addProblemPageField(p.page, p.count);
+                    });
                 }
             } else {
-                document.getElementById('juzAhzabScopeType').value = attempt.scopeType || 'all';
+                const scopeType = attempt.scopeType || 'all';
+                document.getElementById('juzAhzabScopeType').value = scopeType;
                 onJuzAhzabScopeTypeChanged();
-                if (attempt.scopeType === 'unmemorized' && attempt.unmemorizedSurahs) {
-                    const multi = document.getElementById('unmemorizedSurahs');
-                    Array.from(multi.options).forEach(opt => {
+                if (scopeType === 'unmemorized' && attempt.unmemorizedSurahs) {
+                    const multiSelect = document.getElementById('unmemorizedSurahs');
+                    Array.from(multiSelect.options).forEach(opt => {
                         opt.selected = attempt.unmemorizedSurahs.includes(opt.value);
                     });
                 }
                 if (attempt.problemSurahs && attempt.problemSurahs.length > 0) {
                     document.getElementById('enableJuzProblemSurahs').checked = true;
-                    toggleJuzProblemSurahs();
+                    document.getElementById('juzProblemSurahsContainer').style.display = 'block';
                     const multiProb = document.getElementById('juzProblemSurahsSelect');
                     Array.from(multiProb.options).forEach(opt => {
                         opt.selected = attempt.problemSurahs.includes(opt.value);
                     });
-                } else {
-                    document.getElementById('enableJuzProblemSurahs').checked = false;
-                    document.getElementById('juzProblemSurahsContainer').style.display = 'none';
                 }
             }
 
@@ -1328,10 +1589,8 @@
             document.getElementById('groupDoubtsCount').value = 0;
             document.getElementById('groupHesitationsCount').value = 0;
             document.getElementById('groupTajweedCount').value = 0;
-
             document.getElementById('enableGroupUnmemorized').checked = false;
             document.getElementById('groupUnmemorizedContainer').style.display = 'none';
-
             document.getElementById('enableGroupProblemSurahs').checked = false;
             document.getElementById('groupProblemSurahsContainer').style.display = 'none';
 
@@ -1345,99 +1604,67 @@
             const endSelect = document.getElementById('groupSurahEnd');
             startSelect.innerHTML = '';
             endSelect.innerHTML = '';
+
             surahNames.forEach((name, idx) => {
                 const opt1 = document.createElement('option');
                 opt1.value = idx + 1;
-                opt1.innerText = name;
+                opt1.innerText = `${idx + 1}. سورة ${name}`;
                 startSelect.appendChild(opt1);
 
                 const opt2 = document.createElement('option');
                 opt2.value = idx + 1;
-                opt2.innerText = name;
+                opt2.innerText = `${idx + 1}. سورة ${name}`;
                 endSelect.appendChild(opt2);
             });
+            startSelect.value = 1;
+            endSelect.value = 114;
         }
 
         function onGroupSurahsRangeChanged() {
-            const startIdx = parseInt(document.getElementById('groupSurahStart').value) || 1;
-            const endIdx = parseInt(document.getElementById('groupSurahEnd').value) || 1;
-            const range = getSurahRangeArray(startIdx, endIdx);
+            const startVal = parseInt(document.getElementById('groupSurahStart').value) || 1;
+            const endVal = parseInt(document.getElementById('groupSurahEnd').value) || 114;
+
+            const minS = Math.min(startVal, endVal);
+            const maxS = Math.max(startVal, endVal);
 
             const unmemSelect = document.getElementById('groupUnmemorizedSelect');
             const probSelect = document.getElementById('groupProblemSurahsSelect');
             unmemSelect.innerHTML = '';
             probSelect.innerHTML = '';
 
-            range.forEach(sIdx => {
-                const name = surahNames[sIdx - 1];
+            for (let i = minS; i <= maxS; i++) {
+                const sName = surahNames[i - 1];
                 const opt1 = document.createElement('option');
-                opt1.value = name; opt1.innerText = name;
+                opt1.value = sName;
+                opt1.innerText = sName;
                 unmemSelect.appendChild(opt1);
 
                 const opt2 = document.createElement('option');
-                opt2.value = name; opt2.innerText = name;
+                opt2.value = sName;
+                opt2.innerText = sName;
                 probSelect.appendChild(opt2);
-            });
-        }
-
-        function setupVersesDropdowns(surahIndex) {
-            const totalVerses = surahVersesCount[surahIndex - 1];
-            const startSelect = document.getElementById('verseStart');
-            
-            startSelect.innerHTML = '';
-            for (let v = 1; v <= totalVerses; v++) {
-                const opt = document.createElement('option');
-                opt.value = v;
-                opt.innerText = v;
-                startSelect.appendChild(opt);
             }
-            onVerseStartChanged();
         }
 
-        function setupUnmemorizedSurahsDropdown(index) {
-            const multiSelect = document.getElementById('unmemorizedSurahs');
-            multiSelect.innerHTML = '';
-            let relevantSurahs = (currentSelectedTab === 'ajza') ? (ajzaSurahsMapping[index] || []) : (ahzabSurahsMapping[index] || []);
-            
-            relevantSurahs.forEach(surah => {
-                const opt = document.createElement('option');
-                opt.value = surah;
-                opt.innerText = surah;
-                multiSelect.appendChild(opt);
-            });
-        }
-
-        function setupJuzProblemSurahsDropdown(index) {
-            const multiSelect = document.getElementById('juzProblemSurahsSelect');
-            multiSelect.innerHTML = '';
-            let relevantSurahs = (currentSelectedTab === 'ajza') ? (ajzaSurahsMapping[index] || []) : (ahzabSurahsMapping[index] || []);
-
-            relevantSurahs.forEach(surah => {
-                const opt = document.createElement('option');
-                opt.value = surah;
-                opt.innerText = surah;
-                multiSelect.appendChild(opt);
-            });
-        }
-
-        function onSurahScopeTypeChanged() {
-            const type = document.getElementById('surahScopeType').value;
-            const pickers = document.getElementById('versesPickers');
-            pickers.style.display = (type === 'verses') ? 'flex' : 'none';
-        }
-
-        function onJuzAhzabScopeTypeChanged() {
-            const type = document.getElementById('juzAhzabScopeType').value;
-            const picker = document.getElementById('unmemorizedSurahsPicker');
-            picker.style.display = (type === 'unmemorized') ? 'flex' : 'none';
+        function addProblemPageField(pageVal = '', countVal = 1) {
+            const list = document.getElementById('problemPagesList');
+            const row = document.createElement('div');
+            row.className = 'page-input-row';
+            row.innerHTML = `
+                <input type="number" placeholder="رقم الصفحة" class="prob-page-num" min="1" max="604" value="${pageVal}" style="flex:1;">
+                <input type="number" placeholder="الأخطاء" class="prob-page-count" min="1" value="${countVal}" style="width:70px;">
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()" style="padding:4px 8px;"><i class="ph ph-x"></i></button>
+            `;
+            list.appendChild(row);
         }
 
         function onVerseStartChanged() {
-            const startVal = parseInt(document.getElementById('verseStart').value) || 1;
+            const startSelect = document.getElementById('verseStart');
             const endSelect = document.getElementById('verseEnd');
+            const startVal = parseInt(startSelect.value);
             const totalVerses = surahVersesCount[currentSelectedIndex - 1];
-            const currentEndVal = parseInt(endSelect.value);
 
+            const currentEndVal = parseInt(endSelect.value);
             endSelect.innerHTML = '';
             for (let v = startVal; v <= totalVerses; v++) {
                 const opt = document.createElement('option');
@@ -1445,7 +1672,6 @@
                 opt.innerText = v;
                 endSelect.appendChild(opt);
             }
-
             if (currentEndVal >= startVal && currentEndVal <= totalVerses) {
                 endSelect.value = currentEndVal;
             }
@@ -1458,7 +1684,7 @@
             const tajweedErrors = parseInt(document.getElementById('tajweedCount').value) || 0;
 
             let totalDeduction = errors * settings.errorDeduction;
-            totalDeduction += (doubts / 2) * settings.doubtDeduction; 
+            totalDeduction += (doubts / 2) * settings.doubtDeduction;
             totalDeduction += tajweedErrors * (settings.tajweedDeduction || 0.25);
 
             let finalScore = 10 - totalDeduction;
@@ -1466,95 +1692,72 @@
             finalScore = Math.round(finalScore * 10) / 10;
 
             const student = studentsList.find(s => s.id === currentStudentId);
-            
             if (!student.data) student.data = {};
             if (!student.surahData) student.surahData = {};
             if (!student.ajzaData) student.ajzaData = {};
 
-            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
+            let targetData = currentSelectedTab === 'ahzab' ? student.data : (currentSelectedTab === 'suwar' ? student.surahData : student.ajzaData);
 
-            if (!targetData[currentSelectedIndex]) targetData[currentSelectedIndex] = [];
+            if (!targetData[currentSelectedIndex]) {
+                targetData[currentSelectedIndex] = [];
+            }
 
-            let evalDate = new Date().toLocaleDateString('ar-EG');
+            let attemptDate = new Date().toLocaleDateString('ar-SA');
             if (document.getElementById('enablePreviousDate').checked) {
-                const customVal = document.getElementById('customEvalDate').value;
-                if (customVal) {
-                    const d = new Date(customVal);
-                    evalDate = d.toLocaleDateString('ar-EG');
+                const customDate = document.getElementById('customEvalDate').value;
+                if (customDate) {
+                    attemptDate = customDate;
                 }
             }
 
-            let currentAttemptData = (editingAttemptIndex !== null) ? targetData[currentSelectedIndex][editingAttemptIndex] : null;
+            const attempt = {
+                score: finalScore,
+                errors: errors,
+                doubts: doubts,
+                hesitations: hesitations,
+                tajweedErrors: tajweedErrors,
+                date: attemptDate
+            };
 
-            if (editingAttemptIndex !== null && currentAttemptData && currentAttemptData.isGroup) {
-                const groupIdToUpdate = currentAttemptData.groupIdentifier;
-                let rangeSurahs = getSurahRangeArray(currentAttemptData.startSurahIdx, currentAttemptData.endSurahIdx);
+            if (currentSelectedTab === 'suwar') {
+                const scopeType = document.getElementById('surahScopeType').value;
+                attempt.scopeType = scopeType;
+                if (scopeType === 'verses') {
+                    attempt.verseStart = parseInt(document.getElementById('verseStart').value);
+                    attempt.verseEnd = parseInt(document.getElementById('verseEnd').value);
+                }
+                if (document.getElementById('enableProblemPages').checked) {
+                    const probRows = document.querySelectorAll('#problemPagesList .page-input-row');
+                    const pagesArr = [];
+                    probRows.forEach(r => {
+                        const pNum = parseInt(r.querySelector('.prob-page-num').value);
+                        const pCnt = parseInt(r.querySelector('.prob-page-count').value) || 1;
+                        if (pNum) pagesArr.push({ page: pNum, count: pCnt });
+                    });
+                    attempt.problemPages = pagesArr;
+                }
+            } else if (currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') {
+                const scopeType = document.getElementById('juzAhzabScopeType').value;
+                attempt.scopeType = scopeType;
+                if (scopeType === 'unmemorized') {
+                    const multiSelect = document.getElementById('unmemorizedSurahs');
+                    attempt.unmemorizedSurahs = Array.from(multiSelect.selectedOptions).map(option => option.value);
+                }
+                if (document.getElementById('enableJuzProblemSurahs').checked) {
+                    const multiProb = document.getElementById('juzProblemSurahsSelect');
+                    attempt.problemSurahs = Array.from(multiProb.selectedOptions).map(option => option.value);
+                }
+            }
 
-                rangeSurahs.forEach(sIdx => {
-                    if (student.surahData[sIdx]) {
-                        student.surahData[sIdx].forEach(att => {
-                            if (att.isGroup && (att.groupIdentifier === groupIdToUpdate || (groupIdToUpdate === undefined && att.date === currentAttemptData.date && att.groupRangeText === currentAttemptData.groupRangeText))) {
-                                att.errors = errors;
-                                att.doubts = doubts;
-                                att.hesitations = hesitations;
-                                att.tajweedErrors = tajweedErrors;
-                                att.score = finalScore;
-                                att.date = evalDate;
-                            }
-                        });
-                    }
-                });
+            if (editingAttemptIndex !== null) {
+                targetData[currentSelectedIndex][editingAttemptIndex] = attempt;
             } else {
-                let attempt = {
-                    attemptNumber: (editingAttemptIndex !== null) ? (editingAttemptIndex + 1) : (targetData[currentSelectedIndex].length + 1),
-                    date: evalDate,
-                    errors: errors,
-                    doubts: doubts,
-                    hesitations: hesitations,
-                    tajweedErrors: tajweedErrors,
-                    score: finalScore
-                };
-
-                if (currentSelectedTab === 'suwar') {
-                    const scopeType = document.getElementById('surahScopeType').value;
-                    attempt.scopeType = scopeType;
-                    if (scopeType === 'verses') {
-                        attempt.verseStart = parseInt(document.getElementById('verseStart').value);
-                        attempt.verseEnd = parseInt(document.getElementById('verseEnd').value);
-                    }
-
-                    if (document.getElementById('enableProblemPages').checked) {
-                        const pageInputs = document.querySelectorAll('.problem-page-input');
-                        const pages = [];
-                        pageInputs.forEach(input => {
-                            const val = parseInt(input.value);
-                            if (val && !isNaN(val)) pages.push(val);
-                        });
-                        if (pages.length > 0) attempt.problemPages = pages;
-                    }
-                } 
-                else if (currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') {
-                    const scopeType = document.getElementById('juzAhzabScopeType').value;
-                    attempt.scopeType = scopeType;
-                    if (scopeType === 'unmemorized') {
-                        const multiSelect = document.getElementById('unmemorizedSurahs');
-                        attempt.unmemorizedSurahs = Array.from(multiSelect.selectedOptions).map(option => option.value);
-                    }
-                    if (document.getElementById('enableJuzProblemSurahs').checked) {
-                        const multiProb = document.getElementById('juzProblemSurahsSelect');
-                        attempt.problemSurahs = Array.from(multiProb.selectedOptions).map(option => option.value);
-                    }
-                }
-
-                if (editingAttemptIndex !== null) {
-                    targetData[currentSelectedIndex][editingAttemptIndex] = attempt;
-                } else {
-                    targetData[currentSelectedIndex].push(attempt);
-                }
+                targetData[currentSelectedIndex].push(attempt);
             }
 
             saveStudentsToStorage();
             renderList();
+            renderEvalStats();
             displayHistory(currentSelectedIndex);
             closeDialog('evaluationDialog');
             sendDataToSketchware("EVALUATION_SAVED");
@@ -1581,292 +1784,249 @@
 
             const student = studentsList.find(s => s.id === currentStudentId);
             if (!student.surahData) student.surahData = {};
+            if (!student.groupEvaluations) student.groupEvaluations = [];
 
-            let rangeSurahs = getSurahRangeArray(startIdx, endIdx);
+            const minS = Math.min(startIdx, endIdx);
+            const maxS = Math.max(startIdx, endIdx);
 
-            let unmemorizedSurahs = [];
+            let unmemSurahs = [];
             if (document.getElementById('enableGroupUnmemorized').checked) {
-                const multiUnmem = document.getElementById('groupUnmemorizedSelect');
-                unmemorizedSurahs = Array.from(multiUnmem.selectedOptions).map(opt => opt.value);
+                const unmemSelect = document.getElementById('groupUnmemorizedSelect');
+                unmemSurahs = Array.from(unmemSelect.selectedOptions).map(opt => opt.value);
             }
 
-            let problemSurahs = [];
+            let probSurahs = [];
             if (document.getElementById('enableGroupProblemSurahs').checked) {
-                const multiProb = document.getElementById('groupProblemSurahsSelect');
-                problemSurahs = Array.from(multiProb.selectedOptions).map(opt => opt.value);
+                const probSelect = document.getElementById('groupProblemSurahsSelect');
+                probSurahs = Array.from(probSelect.selectedOptions).map(opt => opt.value);
             }
 
-            const groupIdentifier = 'grp_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+            const groupEvalRecord = {
+                startSurah: startName,
+                endSurah: endName,
+                startIdx: minS,
+                endIdx: maxS,
+                score: finalScore,
+                errors: errors,
+                doubts: doubts,
+                hesitations: hesitations,
+                tajweedErrors: tajweedErrors,
+                unmemorizedSurahs: unmemSurahs,
+                problemSurahs: probSurahs,
+                date: new Date().toLocaleDateString('ar-SA')
+            };
 
-            rangeSurahs.forEach(sIdx => {
-                if (!student.surahData[sIdx]) student.surahData[sIdx] = [];
-                const actualAttemptNumber = student.surahData[sIdx].length + 1;
+            if (editingGroupAttemptIndex !== null) {
+                student.groupEvaluations[editingGroupAttemptIndex] = groupEvalRecord;
+            } else {
+                student.groupEvaluations.push(groupEvalRecord);
+            }
 
-                const attempt = {
-                    attemptNumber: actualAttemptNumber,
-                    date: new Date().toLocaleDateString('ar-EG'),
+            for (let i = minS; i <= maxS; i++) {
+                if (!student.surahData[i]) student.surahData[i] = [];
+                student.surahData[i].push({
+                    score: finalScore,
                     errors: errors,
                     doubts: doubts,
                     hesitations: hesitations,
                     tajweedErrors: tajweedErrors,
-                    score: finalScore,
-                    isGroup: true,
-                    groupIdentifier: groupIdentifier,
-                    groupRangeText: `${startName} - ${endName}`,
-                    startSurahIdx: startIdx,
-                    endSurahIdx: endIdx,
-                    unmemorizedSurahs: unmemorizedSurahs,
-                    problemSurahs: problemSurahs
-                };
-
-                student.surahData[sIdx].push(attempt);
-            });
+                    isGroupEval: true,
+                    unmemorizedSurahs: unmemSurahs,
+                    problemSurahs: probSurahs,
+                    groupRange: `من سورة ${startName} إلى ${endName}`,
+                    date: groupEvalRecord.date
+                });
+            }
 
             saveStudentsToStorage();
             renderList();
+            renderEvalStats();
             closeDialog('groupEvaluationDialog');
-            sendDataToSketchware("EVALUATION_SAVED");
+            sendDataToSketchware("GROUP_EVALUATION_SAVED");
         }
 
         function renderGroupHistory() {
             const listContainer = document.getElementById('groupHistoryList');
             listContainer.innerHTML = '';
-            
             const student = getCurrentStudentData();
-            if (!student.surahData) {
-                listContainer.innerHTML = '<p style="color:#aaa; font-size:13px;">لا توجد مجموعات مُسمّعة.</p>';
+            if (!student || !student.groupEvaluations || student.groupEvaluations.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:10px;">لا توجد تسميعات مجموعة مسجلة.</div>';
                 return;
             }
 
-            let groupsMap = {};
-            Object.keys(student.surahData).forEach(sIdx => {
-                const attempts = student.surahData[sIdx];
-                attempts.forEach((att) => {
-                    if (att.isGroup) {
-                        const key = att.groupIdentifier || `${att.groupRangeText}_${att.date}_${att.score}`;
-                        if (!groupsMap[key]) {
-                            groupsMap[key] = {
-                                groupIdentifier: att.groupIdentifier || null,
-                                groupRangeText: att.groupRangeText,
-                                date: att.date,
-                                score: att.score,
-                                startSurahIdx: att.startSurahIdx,
-                                endSurahIdx: att.endSurahIdx
-                            };
-                        }
-                    }
-                });
-            });
+            [...student.groupEvaluations].reverse().forEach((item, index) => {
+                const realIdx = student.groupEvaluations.length - 1 - index;
+                const div = document.createElement('div');
+                div.className = 'history-item';
 
-            const keys = Object.keys(groupsMap);
-            if (keys.length === 0) {
-                listContainer.innerHTML = '<p style="color:#aaa; font-size:13px;">لا توجد مجموعات مُسمّعة حالياً.</p>';
-                return;
-            }
+                let addonsText = '';
+                if (item.unmemorizedSurahs && item.unmemorizedSurahs.length > 0) {
+                    addonsText += `<br><span style="color:var(--danger-color); font-size:11px;">لم تحفظ: ${item.unmemorizedSurahs.join('، ')}</span>`;
+                }
+                if (item.problemSurahs && item.problemSurahs.length > 0) {
+                    addonsText += `<br><span style="color:var(--warning-color); font-size:11px;">إشكال: ${item.problemSurahs.join('، ')}</span>`;
+                }
 
-            keys.forEach(key => {
-                const grp = groupsMap[key];
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                
-                const gId = grp.groupIdentifier ? `'${grp.groupIdentifier}'` : 'null';
-                
-                item.innerHTML = `
+                div.innerHTML = `
                     <div>
-                        <strong style="color:var(--group-label-color);">${grp.groupRangeText}</strong>
-                        <small style="opacity:0.7"> (${grp.date})</small><br>
-                        <span style="font-size:12px;">الدرجة: ${grp.score}/10</span>
+                        <strong>من ${item.startSurah} إلى ${item.endSurah}</strong><br>
+                        <small style="color:#64748b;">${item.date} | أخطاء: ${item.errors}، شكوك: ${item.doubts}، ترددات: ${item.hesitations}، تجويد: ${item.tajweedErrors || 0}</small>
+                        ${addonsText}
                     </div>
-                    <button class="btn btn-danger" style="padding:4px 8px; font-size:12px; flex:0;" onclick="deleteGroupAttempt(${gId}, '${grp.startSurahIdx}', '${grp.endSurahIdx}', '${grp.date}', '${grp.groupRangeText}')"><i class="ph ph-trash"></i> حذف المجموعة</button>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="status-badge ${item.score >= 8.5 ? 'status-excellent' : 'status-good'}">${item.score}/10</span>
+                        <button class="btn btn-danger" style="padding:2px 6px; font-size:12px;" onclick="deleteGroupAttempt(${realIdx})"><i class="ph ph-trash"></i></button>
+                    </div>
                 `;
-                listContainer.appendChild(item);
+                listContainer.appendChild(div);
             });
         }
 
-        function deleteGroupAttempt(groupIdentifier, startIdx, endIdx, date, groupRangeText) {
-            if (!confirm("هل أنت متأكد من حذف هذه المجموعة المسمعة بالكامل؟")) return;
+        function deleteGroupAttempt(index) {
             const student = getCurrentStudentData();
-            const range = getSurahRangeArray(parseInt(startIdx), parseInt(endIdx));
-
-            range.forEach(sIdx => {
-                if (student.surahData[sIdx]) {
-                    student.surahData[sIdx] = student.surahData[sIdx].filter(att => {
-                        if (!att.isGroup) return true;
-                        if (groupIdentifier && att.groupIdentifier) {
-                            return att.groupIdentifier !== groupIdentifier;
-                        }
-                        return !(att.date === date && att.groupRangeText === groupRangeText);
-                    });
-                    
-                    student.surahData[sIdx].forEach((attempt, newIdx) => {
-                        attempt.attemptNumber = newIdx + 1;
-                    });
-                    
-                    if (student.surahData[sIdx].length === 0) delete student.surahData[sIdx];
+            if (student && student.groupEvaluations && student.groupEvaluations[index]) {
+                if (confirm("هل أنت متأكد من حذف هذه المحاولة؟")) {
+                    student.groupEvaluations.splice(index, 1);
+                    saveStudentsToStorage();
+                    renderGroupHistory();
+                    renderList();
+                    renderEvalStats();
                 }
-            });
-
-            saveStudentsToStorage();
-            renderList();
-            renderGroupHistory();
+            }
         }
 
         function displayHistory(index) {
             const historyList = document.getElementById('historyList');
             historyList.innerHTML = '';
-            
             const student = getCurrentStudentData();
-            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
+            let targetData = currentSelectedTab === 'ahzab' ? student.data : (currentSelectedTab === 'suwar' ? student.surahData : student.ajzaData);
+            const attempts = targetData[index] || [];
 
-            if (!targetData[index] || targetData[index].length === 0) {
-                historyList.innerHTML = '<p style="color:#aaa; font-size:14px;">لا توجد محاولات مسجلة سابقاً.</p>';
+            if (attempts.length === 0) {
+                historyList.innerHTML = '<div style="text-align:center; color:#64748b; padding:10px;">لا توجد محاولات سابقة.</div>';
                 return;
             }
 
-            const allAttempts = targetData[index];
-            const reversedAttempts = [...allAttempts].reverse();
-
-            reversedAttempts.forEach((attempt) => {
+            [...attempts].reverse().forEach((attempt, revIdx) => {
+                const actualIdx = attempts.length - 1 - revIdx;
                 const item = document.createElement('div');
                 item.className = 'history-item';
-                
-                let numText = `المرة (${attempt.attemptNumber})`;
-                if (attempt.attemptNumber === 1) numText = "المرة الأولى";
-                else if (attempt.attemptNumber === 2) numText = "المرة الثانية";
-                else if (attempt.attemptNumber === 3) numText = "المرة الثالثة";
 
-                const originalIndex = attempt.attemptNumber - 1;
-                const tajweedVal = attempt.tajweedErrors !== undefined ? attempt.tajweedErrors : 0;
+                let scopeText = '';
+                if (currentSelectedTab === 'suwar' && attempt.scopeType === 'verses') {
+                    scopeText = ` | الآيات: ${attempt.verseStart}-${attempt.verseEnd}`;
+                } else if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && attempt.scopeType === 'unmemorized' && attempt.unmemorizedSurahs && attempt.unmemorizedSurahs.length > 0) {
+                    scopeText = ` | دون سورة: ${attempt.unmemorizedSurahs.join('، ')}`;
+                }
 
-                let scopeText = "";
-                let isGroupStyle = "";
-                let scoreTextDisplay = `${attempt.score}/10`;
-
-                let score = attempt.score;
-                let statusText = (score > 7.5) ? 'ممتاز' : ((score > 5.0) ? 'جيد جداً' : ((score > 2.5) ? 'جيد' : 'ضعيف'));
-
-                if (currentSelectedTab === 'suwar' && attempt.isGroup) {
-                    isGroupStyle = `style="color: var(--group-label-color);"`;
-                    scoreTextDisplay = "";
-                    numText = `مجموعة : ${attempt.groupRangeText}`;
-                    scopeText = ` | التقييم الرقمي: ${attempt.score}/10 | ${statusText}`;
-                } else {
-                    if (currentSelectedTab === 'suwar' && attempt.scopeType === 'verses' && attempt.verseStart && attempt.verseEnd) {
-                        scopeText = ` | الآيات: من ${attempt.verseStart} إلى ${attempt.verseEnd}`;
-                    } 
-                    else if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && attempt.scopeType === 'unmemorized' && attempt.unmemorizedSurahs && attempt.unmemorizedSurahs.length > 0) {
-                        scopeText = ` | دون سورة: ${attempt.unmemorizedSurahs.join('، ')}`;
-                    }
-
-                    if (currentSelectedTab === 'suwar' && attempt.problemPages && attempt.problemPages.length > 0) {
-                        scopeText += ` | صفحات بإشكال: ${attempt.problemPages.join('، ')}`;
-                    }
-
-                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && attempt.problemSurahs && attempt.problemSurahs.length > 0) {
-                        scopeText += ` | سور بإشكال: ${attempt.problemSurahs.join('، ')}`;
-                    }
+                if (currentSelectedTab === 'suwar' && attempt.problemPages && attempt.problemPages.length > 0) {
+                    scopeText += ` | صفحات بإشكال: ${attempt.problemPages.map(p => `ص${p.page}`).join('، ')}`;
+                }
+                if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && attempt.problemSurahs && attempt.problemSurahs.length > 0) {
+                    scopeText += ` | سور بإشكال: ${attempt.problemSurahs.join('، ')}`;
                 }
 
                 item.innerHTML = `
-                    <div style="flex-grow: 1;">
-                        <strong ${isGroupStyle}>${numText}</strong> <small style="opacity:0.7">(${attempt.date})</small><br>
-                        <span style="font-size:11px; opacity:0.9;">
-                            الأخطاء: ${attempt.errors} | الترددات: ${attempt.hesitations} | الشكوك: ${attempt.doubts} | التجويد: ${tajweedVal}${scopeText}
-                        </span>
+                    <div>
+                        <strong>الدرجة: ${attempt.score} / 10 ${attempt.isGroupEval ? '<span style="color:var(--accent-color); font-size:11px;">(مجموعة)</span>' : ''}</strong> ${scopeText}<br>
+                        <small style="color: #64748b;">${attempt.date} - أخطاء: ${attempt.errors}، شكوك: ${attempt.doubts}، ترددات: ${attempt.hesitations}، تجويد: ${attempt.tajweedErrors || 0}</small>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="font-weight:bold; font-size:15px; color: var(--accent-color);">
-                            ${scoreTextDisplay}
-                        </div>
-                        <button class="btn btn-warning" style="padding: 2px 6px; font-size: 11px; border-radius: 4px;" 
-                                onclick="editSpecificAttempt(${index}, ${originalIndex})" title="تعديل"><i class="ph ph-pencil-simple"></i></button>
-                        <button class="btn btn-danger" style="padding: 2px 6px; font-size: 11px; border-radius: 4px;" 
-                                onclick="deleteSpecificAttempt(${index}, ${originalIndex})" title="حذف"><i class="ph ph-trash"></i></button>
+                    <div style="display:flex; gap:4px;">
+                        <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 12px;" onclick="editAttempt(${actualIdx})"><i class="ph ph-pencil-simple"></i></button>
+                        <button class="btn btn-danger" style="padding: 2px 6px; font-size: 12px;" onclick="deleteAttempt(${actualIdx})"><i class="ph ph-trash"></i></button>
                     </div>
                 `;
                 historyList.appendChild(item);
             });
         }
 
-        function deleteSpecificAttempt(itemIndex, attemptArrayId) {
-            const student = studentsList.find(s => s.id === currentStudentId);
-            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
-
-            if (targetData[itemIndex] && targetData[itemIndex][attemptArrayId]) {
-                const targetAttempt = targetData[itemIndex][attemptArrayId];
-                
-                if (currentSelectedTab === 'suwar' && targetAttempt.isGroup) {
-                    alert("هذا السجل تابع لتسميع مجموعة مخصص. لحذفه، يرجى الاستعانة بخيار حذف المجموعة من شاشة (تسميع مجموعة مخصص).");
-                    return;
-                }
-
-                if (!confirm("هل أنت متأكد من حذف هذه المحاولة المحددة؟")) return;
-
-                targetData[itemIndex].splice(attemptArrayId, 1);
-
-                targetData[itemIndex].forEach((attempt, newIdx) => {
-                    attempt.attemptNumber = newIdx + 1;
-                });
-
-                if (targetData[itemIndex].length === 0) delete targetData[itemIndex];
-
+        function deleteAttempt(attemptIndex) {
+            if (confirm("هل أنت متأكد من حذف هذه المحاولة؟")) {
+                const student = getCurrentStudentData();
+                let targetData = currentSelectedTab === 'ahzab' ? student.data : (currentSelectedTab === 'suwar' ? student.surahData : student.ajzaData);
+                targetData[currentSelectedIndex].splice(attemptIndex, 1);
                 saveStudentsToStorage();
                 renderList();
-                displayHistory(itemIndex);
-
-                alert("تم حذف التسميع بنجاح وإعادة ترتيب مرات التسميع المتبقية تلقائيا");
+                renderEvalStats();
+                displayHistory(currentSelectedIndex);
                 sendDataToSketchware("EVALUATION_DELETED");
             }
         }
 
-        function renameStudent() {
-            if (!currentStudentId) return;
-            const student = studentsList.find(s => s.id === currentStudentId);
-            const newName = prompt(`تعديل اسم الطالب الحالي:`, student.name);
-            if (!newName || newName.trim() === "") return;
-            
-            student.name = newName.trim();
-            saveStudentsToStorage();
-            updateStudentSelectOptions();
-            sendDataToSketchware("STUDENT_RENAMED");
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            const btn = document.getElementById('themeBtn');
+            if (currentTheme === 'dark') {
+                btn.innerHTML = '<i class="ph ph-sun"></i> مظهر فاتح';
+            } else {
+                btn.innerHTML = '<i class="ph ph-moon"></i> مظهر داكن';
+            }
+            sendDataToSketchware("THEME_CHANGED", currentTheme);
         }
 
-        function deleteStudent() {
-            if (!currentStudentId) return;
-            const student = studentsList.find(s => s.id === currentStudentId);
-            if (!confirm(`هل أنت متأكد من حذف الطالب (${student.name}) وجميع سجلات تسميعه بشكل نهائي؟`)) return;
-            
-            studentsList = studentsList.filter(s => s.id !== currentStudentId);
-            
-            const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
-            currentStudentId = filteredStudents.length > 0 ? filteredStudents[0].id : null;
-            
-            saveStudentsToStorage();
-            updateStudentSelectOptions();
+        function toggleSortOrder() {
+            sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            const btn = document.getElementById('sortBtn');
+            btn.innerHTML = sortOrder === 'asc' ? '<i class="ph ph-sort-ascending"></i> ترتيب: تصاعدي' : '<i class="ph ph-sort-descending"></i> ترتيب: تنازلي';
             renderList();
-            sendDataToSketchware("STUDENT_DELETED");
+        }
+
+        function openSettings() {
+            document.getElementById('errorDeduction').value = settings.errorDeduction;
+            document.getElementById('doubtDeduction').value = settings.doubtDeduction;
+            document.getElementById('tajweedDeduction').value = settings.tajweedDeduction || 0.25;
+            document.getElementById('confidenceDeduction').value = settings.confidenceDeduction !== undefined ? settings.confidenceDeduction : 5;
+            populateGroupDropdown();
+            document.getElementById('settingsDialog').showModal();
+        }
+
+        function saveSettings() {
+            settings.errorDeduction = parseFloat(document.getElementById('errorDeduction').value) || 1.0;
+            settings.doubtDeduction = parseFloat(document.getElementById('doubtDeduction').value) || 1.0;
+            settings.tajweedDeduction = parseFloat(document.getElementById('tajweedDeduction').value) || 0.25;
+            settings.confidenceDeduction = parseFloat(document.getElementById('confidenceDeduction').value) || 0;
+            localStorage.setItem('quran_teacher_settings', JSON.stringify(settings));
+            closeDialog('settingsDialog');
+            renderList();
+            renderEvalStats();
+            sendDataToSketchware("SETTINGS_SAVED");
+        }
+
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('quran_teacher_settings');
+            if (savedSettings) {
+                try {
+                    settings = JSON.parse(savedSettings);
+                } catch(e) {}
+            }
+        }
+
+        function closeDialog(dialogId) {
+            document.getElementById(dialogId).close();
         }
 
         function exportData() {
-            const backupData = {
-                groups: localStorage.getItem('quran_groups_list'),
-                currentGroupId: localStorage.getItem('quran_current_group_id'),
-                students: localStorage.getItem('quran_students_list'),
-                currentId: localStorage.getItem('quran_current_student_id'),
-                settings: localStorage.getItem('quran_teacher_settings')
+            const exportObject = {
+                students: JSON.stringify(studentsList),
+                currentId: currentStudentId,
+                groups: JSON.stringify(groupsList),
+                currentGroupId: currentGroupId,
+                settings: JSON.stringify(settings)
             };
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "quran_backup.json");
+            downloadAnchor.setAttribute("download", `quran_tracker_backup_${new Date().toISOString().split('T')[0]}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
             sendDataToSketchware("DATA_EXPORTED");
         }
 
-        function triggerImport() { document.getElementById('importFileInput').click(); }
+        function triggerImport() {
+            document.getElementById('importFileInput').click();
+        }
 
         function importData(event) {
             const file = event.target.files[0];
@@ -1888,6 +2048,7 @@
                             loadSettings();
                             loadGroupsData();
                             loadStudentsData();
+                            renderEvalStats();
                             sendDataToSketchware("DATA_IMPORTED");
                         }
                     } else {
@@ -1900,6 +2061,14 @@
             reader.readAsText(file);
             event.target.value = '';
         }
+
+        window.onload = function() {
+            loadSettings();
+            loadGroupsData();
+            loadStudentsData();
+            setupGroupSurahsDropdowns();
+            renderList();
+        };
     </script>
 </body>
 </html>
