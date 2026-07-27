@@ -199,13 +199,19 @@
         }
         [data-theme="dark"] .tab-btn.active { color: #0f172a; }
 
-        /* تنسيقات الفرز حسب التقييم */
+        /* تنسيقات الفرز حسب التقييم والتاريخ */
         .rating-filter-wrapper {
             max-width: 1100px;
             margin: 0 auto 15px auto;
             display: flex;
             flex-direction: column;
             gap: 10px;
+        }
+
+        .filter-buttons-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .rating-cards-scroll {
@@ -423,9 +429,13 @@
         <button class="btn" style="color: #ffffff; background-color: var(--group-label-color); width:100%;" onclick="openGroupEvaluation()"><i class="ph ph-plus"></i> تسميع مجموعة مخصص</button>
     </div>
 
-    <!-- زر الفرز حسب التقييم وكروت التمرير -->
+    <!-- أزرار الفرز (بالتقييم وبالتاريخ) وكروت التمرير -->
     <div class="rating-filter-wrapper">
-        <button class="btn btn-secondary" id="ratingFilterBtn" onclick="toggleRatingFilter()"><i class="ph ph-funnel"></i> الفرز حسب التقييم</button>
+        <div class="filter-buttons-row">
+            <button class="btn btn-secondary" id="ratingFilterBtn" onclick="toggleRatingFilter()"><i class="ph ph-funnel"></i> الفرز حسب التقييم</button>
+            <button class="btn btn-secondary" id="dateFilterBtn" onclick="toggleDateFilter()"><i class="ph ph-calendar-blank"></i> الفرز حسب التاريخ</button>
+        </div>
+        
         <div class="rating-cards-scroll" id="ratingCardsScroll">
             <div class="rating-card" onclick="selectRatingFilter(10)">10/10</div>
             <div class="rating-card" onclick="selectRatingFilter(9)">9/10</div>
@@ -438,6 +448,10 @@
             <div class="rating-card" onclick="selectRatingFilter(2)">2/10</div>
             <div class="rating-card" onclick="selectRatingFilter(1)">1/10</div>
             <div class="rating-card" onclick="selectRatingFilter(0)">0/10</div>
+        </div>
+
+        <div class="rating-cards-scroll" id="dateCardsScroll">
+            <!-- تتولد تواريخ تسميع الطالب المحدّد ديناميكياً هنا -->
         </div>
     </div>
 
@@ -693,6 +707,7 @@
         let currentSelectedIndex = 1;
         let editingAttemptIndex = null;
         let activeRatingFilter = null;
+        let activeDateFilter = null;
 
         window.onload = function() {
             initTheme();
@@ -704,14 +719,20 @@
         };
 
         function toggleRatingFilter() {
-            const scrollContainer = document.getElementById('ratingCardsScroll');
-            if (scrollContainer.classList.contains('show')) {
-                scrollContainer.classList.remove('show');
+            const ratingScroll = document.getElementById('ratingCardsScroll');
+            const dateScroll = document.getElementById('dateCardsScroll');
+            
+            // إغلاق شريط التاريخ إن كان مفتوحاً
+            dateScroll.classList.remove('show');
+            activeDateFilter = null;
+
+            if (ratingScroll.classList.contains('show')) {
+                ratingScroll.classList.remove('show');
                 activeRatingFilter = null;
                 updateRatingCardsUI();
                 renderList();
             } else {
-                scrollContainer.classList.add('show');
+                ratingScroll.classList.add('show');
             }
         }
 
@@ -726,7 +747,7 @@
         }
 
         function updateRatingCardsUI() {
-            const cards = document.querySelectorAll('.rating-card');
+            const cards = document.querySelectorAll('#ratingCardsScroll .rating-card');
             cards.forEach(card => {
                 if (activeRatingFilter !== null && card.innerText.trim() === `${activeRatingFilter}/10`) {
                     card.classList.add('active');
@@ -734,6 +755,100 @@
                     card.classList.remove('active');
                 }
             });
+        }
+
+        /* --- منطق الفرز حسب التاريخ --- */
+        function parseArabicDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+            let parts = cleaned.split('/');
+            if (parts.length === 3) {
+                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            } else if (parts.length === 2) {
+                return new Date(new Date().getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+            }
+            return new Date(0);
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+            let parts = cleaned.split('/');
+            if (parts.length >= 2) {
+                return `${parseInt(parts[0])}/${parseInt(parts[1])}`;
+            }
+            return dateStr;
+        }
+
+        function getStudentUniqueDates() {
+            const student = getCurrentStudentData();
+            if (!student) return [];
+            
+            let datesSet = new Set();
+            let allSections = [student.data || {}, student.surahData || {}, student.ajzaData || {}];
+            
+            allSections.forEach(section => {
+                Object.values(section).forEach(attempts => {
+                    if (Array.isArray(attempts)) {
+                        attempts.forEach(att => {
+                            if (att && att.date) {
+                                datesSet.add(att.date);
+                            }
+                        });
+                    }
+                });
+            });
+
+            let datesArray = Array.from(datesSet);
+            datesArray.sort((a, b) => parseArabicDate(b) - parseArabicDate(a));
+            return datesArray;
+        }
+
+        function toggleDateFilter() {
+            const ratingScroll = document.getElementById('ratingCardsScroll');
+            const dateScroll = document.getElementById('dateCardsScroll');
+
+            ratingScroll.classList.remove('show');
+            activeRatingFilter = null;
+
+            if (dateScroll.classList.contains('show')) {
+                dateScroll.classList.remove('show');
+                activeDateFilter = null;
+                renderList();
+            } else {
+                renderDateCards();
+                dateScroll.classList.add('show');
+            }
+        }
+
+        function renderDateCards() {
+            const dateScroll = document.getElementById('dateCardsScroll');
+            dateScroll.innerHTML = '';
+            const dates = getStudentUniqueDates();
+
+            if (dates.length === 0) {
+                dateScroll.innerHTML = '<div style="font-size:13px; color:#888; padding:8px;">لا توجد تواريخ تسميع لهذا الطالب</div>';
+                return;
+            }
+
+            dates.forEach(dateStr => {
+                const card = document.createElement('div');
+                card.className = 'rating-card';
+                if (activeDateFilter === dateStr) card.classList.add('active');
+                card.innerText = formatDisplayDate(dateStr);
+                card.onclick = () => selectDateFilter(dateStr);
+                dateScroll.appendChild(card);
+            });
+        }
+
+        function selectDateFilter(dateStr) {
+            if (activeDateFilter === dateStr) {
+                activeDateFilter = null;
+            } else {
+                activeDateFilter = dateStr;
+            }
+            renderDateCards();
+            renderList();
         }
 
         function sendDataToSketchware(actionType) {
@@ -849,6 +964,10 @@
             localStorage.setItem('quran_current_student_id', currentStudentId);
             
             updateStudentSelectOptions();
+            activeDateFilter = null;
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
         }
 
@@ -946,6 +1065,10 @@
         function onStudentChanged() {
             currentStudentId = document.getElementById('studentSelect').value;
             localStorage.setItem('quran_current_student_id', currentStudentId);
+            activeDateFilter = null;
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             sendDataToSketchware("STUDENT_CHANGED");
         }
@@ -971,6 +1094,10 @@
             currentStudentId = newStudent.id;
             saveStudentsToStorage();
             updateStudentSelectOptions();
+            activeDateFilter = null;
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             sendDataToSketchware("STUDENT_ADDED");
         }
@@ -1158,7 +1285,7 @@
                     lastScore = attempts[attempts.length - 1].score;
                 }
 
-                // منطق الفرز بالتقييم
+                // 1) منطق الفرز بالتقييم
                 if (activeRatingFilter !== null) {
                     if (lastScore === null) return;
                     if (activeRatingFilter === 10) {
@@ -1168,6 +1295,13 @@
                     } else {
                         if (lastScore < activeRatingFilter || lastScore >= activeRatingFilter + 1) return;
                     }
+                }
+
+                // 2) منطق الفرز بالتاريخ (تختفي كل الكروت غير التي سُمّعت بهذا التاريخ)
+                if (activeDateFilter !== null) {
+                    if (!attempts || attempts.length === 0) return;
+                    const hasAttemptOnDate = attempts.some(att => att.date === activeDateFilter);
+                    if (!hasAttemptOnDate) return;
                 }
 
                 const card = document.createElement('div');
@@ -1183,23 +1317,31 @@
                 let problemSurahsHTML = '';
                 
                 if (attempts && attempts.length > 0) {
-                    const lastAttempt = attempts[attempts.length - 1];
-                    const score = lastAttempt.score;
+                    // في حال الفرز بالتاريخ، نأخذ آخر محاولة تمت في هذا التاريخ المحدد
+                    let displayAttempt = attempts[attempts.length - 1];
+                    if (activeDateFilter !== null) {
+                        const dateAttempts = attempts.filter(att => att.date === activeDateFilter);
+                        if (dateAttempts.length > 0) {
+                            displayAttempt = dateAttempts[dateAttempts.length - 1];
+                        }
+                    }
+
+                    const score = displayAttempt.score;
                     
-                    if (currentSelectedTab === 'suwar' && !lastAttempt.isGroup && lastAttempt.scopeType === 'verses' && lastAttempt.verseStart && lastAttempt.verseEnd) {
-                        versesScopeHTML = `<div style="color: #2980b9; font-weight: bold; font-size: 13px; margin-top: 2px;">من ${lastAttempt.verseStart} إلى ${lastAttempt.verseEnd}</div>`;
+                    if (currentSelectedTab === 'suwar' && !displayAttempt.isGroup && displayAttempt.scopeType === 'verses' && displayAttempt.verseStart && displayAttempt.verseEnd) {
+                        versesScopeHTML = `<div style="color: #2980b9; font-weight: bold; font-size: 13px; margin-top: 2px;">من ${displayAttempt.verseStart} إلى ${displayAttempt.verseEnd}</div>`;
                     }
 
-                    if (currentSelectedTab === 'suwar' && lastAttempt.problemPages && lastAttempt.problemPages.length > 0) {
-                        problemPagesHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">الصفحات التي بها إشكال: ${lastAttempt.problemPages.join('، ')}</div>`;
+                    if (currentSelectedTab === 'suwar' && displayAttempt.problemPages && displayAttempt.problemPages.length > 0) {
+                        problemPagesHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">الصفحات التي بها إشكال: ${displayAttempt.problemPages.join('، ')}</div>`;
                     }
 
-                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.scopeType === 'unmemorized' && lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
-                        unmemorizedHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 13px; margin-top: 2px;">بإستثناء: ${lastAttempt.unmemorizedSurahs.join('، ')} (لم يحفظ)</div>`;
+                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && displayAttempt.scopeType === 'unmemorized' && displayAttempt.unmemorizedSurahs && displayAttempt.unmemorizedSurahs.length > 0) {
+                        unmemorizedHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 13px; margin-top: 2px;">بإستثناء: ${displayAttempt.unmemorizedSurahs.join('، ')} (لم يحفظ)</div>`;
                     }
 
-                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
-                        problemSurahsHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">سور بها إشكال: ${lastAttempt.problemSurahs.join('، ')}</div>`;
+                    if ((currentSelectedTab === 'ajza' || currentSelectedTab === 'ahzab') && displayAttempt.problemSurahs && displayAttempt.problemSurahs.length > 0) {
+                        problemSurahsHTML = `<div style="color: var(--danger-color); font-weight: bold; font-size: 12px; margin-top: 2px;">سور بها إشكال: ${displayAttempt.problemSurahs.join('، ')}</div>`;
                     }
 
                     let badgeClass = '';
@@ -1207,23 +1349,23 @@
                     let confidenceSectionHTML = '';
                     let progressHTML = '';
 
-                    if (currentSelectedTab === 'suwar' && lastAttempt.isGroup) {
+                    if (currentSelectedTab === 'suwar' && displayAttempt.isGroup) {
                         badgeClass = 'status-group-label';
                         borderClass = 'border-group-label';
-                        statusText = lastAttempt.groupRangeText;
+                        statusText = displayAttempt.groupRangeText;
                         
                         let groupAddons = "";
-                        if (lastAttempt.unmemorizedSurahs && lastAttempt.unmemorizedSurahs.length > 0) {
-                            groupAddons += `<div style="color: var(--danger-color); font-weight: bold; font-size: 11px;">لم تُحفظ: ${lastAttempt.unmemorizedSurahs.join('، ')}</div>`;
+                        if (displayAttempt.unmemorizedSurahs && displayAttempt.unmemorizedSurahs.length > 0) {
+                            groupAddons += `<div style="color: var(--danger-color); font-weight: bold; font-size: 11px;">لم تُحفظ: ${displayAttempt.unmemorizedSurahs.join('، ')}</div>`;
                         }
-                        if (lastAttempt.problemSurahs && lastAttempt.problemSurahs.length > 0) {
-                            groupAddons += `<div style="color: var(--warning-color); font-weight: bold; font-size: 11px;">إشكال: ${lastAttempt.problemSurahs.join('، ')}</div>`;
+                        if (displayAttempt.problemSurahs && displayAttempt.problemSurahs.length > 0) {
+                            groupAddons += `<div style="color: var(--warning-color); font-weight: bold; font-size: 11px;">إشكال: ${displayAttempt.problemSurahs.join('، ')}</div>`;
                         }
 
                         confidenceSectionHTML = `<div class="confidence-level" style="color: #27ae60;"><i class="ph ph-shield-check"></i> تسميع مجموعة</div>${groupAddons}`;
                         progressHTML = '';
                     } else {
-                        const hesitations = lastAttempt.hesitations || 0;
+                        const hesitations = displayAttempt.hesitations || 0;
                         const deductionPerHesitation = settings.confidenceDeduction !== undefined ? settings.confidenceDeduction : 5;
                         let confidenceScore = 100 - (hesitations * deductionPerHesitation);
                         if (confidenceScore < 0) confidenceScore = 0;
@@ -1252,7 +1394,7 @@
                     statusHTML = `<span class="status-badge ${badgeClass}">${statusText}</span>`;
                     
                     scoreHTML = `
-                        <span class="last-score">آخر تقييم: ${score}/10 (المحاولات: ${attempts.length})</span>
+                        <span class="last-score">التقييم: ${score}/10 (المحاولات: ${attempts.length})</span>
                         ${versesScopeHTML}
                         ${problemPagesHTML}
                         ${unmemorizedHTML}
@@ -1665,6 +1807,9 @@
             }
 
             saveStudentsToStorage();
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             displayHistory(currentSelectedIndex);
             closeDialog('evaluationDialog');
@@ -1734,6 +1879,9 @@
             });
 
             saveStudentsToStorage();
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             closeDialog('groupEvaluationDialog');
             sendDataToSketchware("EVALUATION_SAVED");
@@ -1818,6 +1966,9 @@
             });
 
             saveStudentsToStorage();
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             renderGroupHistory();
         }
@@ -1922,6 +2073,9 @@
                 if (targetData[itemIndex].length === 0) delete targetData[itemIndex];
 
                 saveStudentsToStorage();
+                if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                    renderDateCards();
+                }
                 renderList();
                 displayHistory(itemIndex);
 
@@ -1954,6 +2108,10 @@
             
             saveStudentsToStorage();
             updateStudentSelectOptions();
+            activeDateFilter = null;
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
             renderList();
             sendDataToSketchware("STUDENT_DELETED");
         }
