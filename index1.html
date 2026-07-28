@@ -247,21 +247,31 @@
         }
 
         .rating-card.active {
-            background: var(--accent-color) !important;
-            color: white !important;
-            border-color: var(--accent-color) !important;
-            box-shadow: none !important;
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
         }
         [data-theme="dark"] .rating-card.active {
-            color: #0f172a !important;
+            color: #0f172a;
         }
 
-        /* تنسيق كرت تاريخ اليوم باللون البرتقالي */
-        .rating-card.today-card {
+        /* تمييز كرت اليوم باللون البرتقالي عند عدم تفعيله */
+        .rating-card.today {
             background-color: #e67e22;
             color: #ffffff;
             border-color: #d35400;
-            box-shadow: 0 0 8px rgba(230, 126, 34, 0.4);
+        }
+        .rating-card.today:hover {
+            background-color: #d35400;
+        }
+        /* عند التفعيل يأخذ اللون الطبيعي لحالة active */
+        .rating-card.today.active {
+            background-color: var(--accent-color) !important;
+            color: white !important;
+            border-color: var(--accent-color) !important;
+        }
+        [data-theme="dark"] .rating-card.today.active {
+            color: #0f172a !important;
         }
 
         .container {
@@ -401,8 +411,6 @@
 </head>
 <body>
 
-
-
     <header>
         <h1><i class="ph ph-book-open"></i> سجل المتابعة لحفظ القرآن</h1>
         <div class="header-actions">
@@ -444,7 +452,7 @@
     <div class="rating-filter-wrapper">
         <div class="filter-buttons-row">
             <button class="btn btn-secondary" id="ratingFilterBtn" onclick="toggleRatingFilter()"><i class="ph ph-funnel"></i> الفرز حسب التقييم</button>
-            <button class="btn btn-secondary" id="dateFilterBtn" onclick="toggleDateFilter()"><i class="ph ph-calendar-blank"></i>مقررات الطالب</button>
+            <button class="btn btn-secondary" id="dateFilterBtn" onclick="toggleDateFilter()"><i class="ph ph-calendar-blank"></i> مقررات الطالب</button>
         </div>
         
         <div class="rating-cards-scroll" id="ratingCardsScroll">
@@ -768,17 +776,42 @@
             });
         }
 
-        /* --- منطق الفرز حسب التاريخ --- */
+        /* --- منطق الفرز حسب التاريخ ودالة التحقق من اليوم --- */
         function parseArabicDate(dateStr) {
             if (!dateStr) return new Date(0);
             let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
             let parts = cleaned.split('/');
             if (parts.length === 3) {
-                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+                let p1 = parseInt(cleanParts[0]) || 0;
+                let p2 = parseInt(cleanParts[1]) || 0;
+                let p3 = parseInt(cleanParts[2]) || 0;
+                
+                if (p3 > 1000) {
+                    if (p2 > 12) {
+                        return new Date(p3, p1 - 1, p2);
+                    } else {
+                        return new Date(p3, p2 - 1, p1);
+                    }
+                } else if (p1 > 1000) {
+                    return new Date(p1, p2 - 1, p3);
+                }
+                return new Date(p3, p2 - 1, p1);
             } else if (parts.length === 2) {
-                return new Date(new Date().getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+                return new Date(new Date().getFullYear(), parseInt(cleanParts[1]) - 1, parseInt(cleanParts[0]));
             }
             return new Date(0);
+        }
+
+        function isTodayDate(dateStr) {
+            if (!dateStr) return false;
+            const targetDate = parseArabicDate(dateStr);
+            const today = new Date();
+            
+            return targetDate.getDate() === today.getDate() &&
+                   targetDate.getMonth() === today.getMonth() &&
+                   targetDate.getFullYear() === today.getFullYear();
         }
 
         function formatDisplayDate(dateStr) {
@@ -786,7 +819,10 @@
             let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
             let parts = cleaned.split('/');
             if (parts.length >= 2) {
-                return `${parseInt(parts[1])}/${parseInt(parts[0])}`;
+                let p1 = parseInt(parts[0].replace(/\D/g, ''));
+                let p2 = parseInt(parts[1].replace(/\D/g, ''));
+                if (isNaN(p1) || isNaN(p2)) return dateStr;
+                return `${p2}/${p1}`;
             }
             return dateStr;
         }
@@ -842,23 +878,20 @@
                 return;
             }
 
-            // الحصول على تاريخ الهاتف الحالي بنفس صيغة العرض (الشهر/اليوم)
-            const today = new Date();
-            const todayFormatted = `${today.getMonth() + 1}/${today.getDate()}`;
-
             dates.forEach(dateStr => {
                 const card = document.createElement('div');
                 card.className = 'rating-card';
                 
-                const cardDisplayDate = formatDisplayDate(dateStr);
-                
-                // مقارنة تاريخ الكرت مع تاريخ الهاتف للتلوين بالبرتقالي
-                if (cardDisplayDate === todayFormatted) {
-                    card.classList.add('today-card');
+                // إضافة كلاس today إذا كان التاريخ يطابق تاريخ اليوم في الهاتف
+                if (isTodayDate(dateStr)) {
+                    card.classList.add('today');
                 }
 
-                if (activeDateFilter === dateStr) card.classList.add('active');
-                card.innerText = cardDisplayDate;
+                if (activeDateFilter === dateStr) {
+                    card.classList.add('active');
+                }
+                
+                card.innerText = formatDisplayDate(dateStr);
                 card.onclick = () => selectDateFilter(dateStr);
                 dateScroll.appendChild(card);
             });
@@ -1424,7 +1457,7 @@
 
                         confidenceSectionHTML = `<div class="confidence-level" style="color: ${confidenceColor};"><i class="ph ph-shield-check"></i> مستوى الثقة: ${confidenceScore}%</div>`;
                         
-                        // إخفاء المقارنات عند تفعيل الفرز بالتاريخ (مقررات الطالب)
+                        // تم إلغاء ميزة المقارنات عند تفعيل فلتر مقررات الطالب (activeDateFilter !== null)
                         if (activeDateFilter === null) {
                             progressHTML = calculateProgressText(attempts);
                         } else {
@@ -2079,7 +2112,7 @@
                             الأخطاء: ${attempt.errors} | الترددات: ${attempt.hesitations} | الشكوك: ${attempt.doubts} | التجويد: ${tajweedVal}${scopeText}
                         </span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="display: flex; align- items: center; gap: 6px;">
                         <div style="font-weight:bold; font-size:15px; color: var(--accent-color);">
                             ${scoreTextDisplay}
                         </div>
@@ -2091,6 +2124,126 @@
                 `;
                 historyList.appendChild(item);
             });
+        }
+
+        function deleteSpecificAttempt(itemIndex, attemptArrayId) {
+            const student = studentsList.find(s => s.id === currentStudentId);
+            let targetData = (currentSelectedTab === 'ahzab') ? student.data : ((currentSelectedTab === 'suwar') ? student.surahData : student.ajzaData);
+
+            if (targetData[itemIndex] && targetData[itemIndex][attemptArrayId]) {
+                const targetAttempt = targetData[itemIndex][attemptArrayId];
+                
+                if (currentSelectedTab === 'suwar' && targetAttempt.isGroup) {
+                    alert("هذا السجل تابع لتسميع مجموعة مخصص. لحذفه، يرجى الاستعانة بخيار حذف المجموعة من شاشة (تسميع مجموعة مخصص).");
+                    return;
+                }
+
+                if (!confirm("هل أنت متأكد من حذف هذه المحاولة المحددة؟")) return;
+
+                targetData[itemIndex].splice(attemptArrayId, 1);
+
+                targetData[itemIndex].forEach((attempt, newIdx) => {
+                    attempt.attemptNumber = newIdx + 1;
+                });
+
+                if (targetData[itemIndex].length === 0) delete targetData[itemIndex];
+
+                saveStudentsToStorage();
+                if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                    renderDateCards();
+                }
+                renderList();
+                displayHistory(itemIndex);
+
+                alert("تم حذف التسميع بنجاح وإعادة ترتيب مرات التسميع المتبقية تلقائيا");
+                sendDataToSketchware("EVALUATION_DELETED");
+            }
+        }
+
+        function renameStudent() {
+            if (!currentStudentId) return;
+            const student = studentsList.find(s => s.id === currentStudentId);
+            const newName = prompt(`تعديل اسم الطالب الحالي:`, student.name);
+            if (!newName || newName.trim() === "") return;
+            
+            student.name = newName.trim();
+            saveStudentsToStorage();
+            updateStudentSelectOptions();
+            sendDataToSketchware("STUDENT_RENAMED");
+        }
+
+        function deleteStudent() {
+            if (!currentStudentId) return;
+            const student = studentsList.find(s => s.id === currentStudentId);
+            if (!confirm(`هل أنت متأكد من حذف الطالب (${student.name}) وجميع سجلات تسميعه بشكل نهائي؟`)) return;
+            
+            studentsList = studentsList.filter(s => s.id !== currentStudentId);
+            
+            const filteredStudents = studentsList.filter(s => (s.groupId || 'group_default') === currentGroupId);
+            currentStudentId = filteredStudents.length > 0 ? filteredStudents[0].id : null;
+            
+            saveStudentsToStorage();
+            updateStudentSelectOptions();
+            activeDateFilter = null;
+            if (document.getElementById('dateCardsScroll').classList.contains('show')) {
+                renderDateCards();
+            }
+            renderList();
+            sendDataToSketchware("STUDENT_DELETED");
+        }
+
+        function exportData() {
+            const backupData = {
+                groups: localStorage.getItem('quran_groups_list'),
+                currentGroupId: localStorage.getItem('quran_current_group_id'),
+                students: localStorage.getItem('quran_students_list'),
+                currentId: localStorage.getItem('quran_current_student_id'),
+                settings: localStorage.getItem('quran_teacher_settings')
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "quran_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            sendDataToSketchware("DATA_EXPORTED");
+        }
+
+        function triggerImport() { document.getElementById('importFileInput').click(); }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData.students) {
+                        if (confirm("هل أنت متأكد من استيراد هذه النسخة؟ سيتم استبدال جميع بيانات الحلقات والطلاب الحالية بالأحزاب والسور والأجزاء.")) {
+                            if (importedData.groups) localStorage.setItem('quran_groups_list', importedData.groups);
+                            if (importedData.currentGroupId) localStorage.setItem('quran_current_group_id', importedData.currentGroupId);
+                            localStorage.setItem('quran_students_list', importedData.students);
+                            if (importedData.currentId) localStorage.setItem('quran_current_student_id', importedData.currentId);
+                            if (importedData.settings) localStorage.setItem('quran_teacher_settings', importedData.settings);
+                            
+                            alert("تم استعادة البيانات بنجاح!");
+                            loadSettings();
+                            loadGroupsData();
+                            loadStudentsData();
+                            sendDataToSketchware("DATA_IMPORTED");
+                        }
+                    } else {
+                        alert("عذراً، هذا الملف غير صالح.");
+                    }
+                } catch (err) {
+                    alert("حدث خطأ أثناء قراءة الملف.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
         }
     </script>
 </body>
