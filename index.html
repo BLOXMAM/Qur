@@ -255,6 +255,25 @@
             color: #0f172a;
         }
 
+        /* تمييز كرت اليوم باللون البرتقالي عند عدم تفعيله */
+        .rating-card.today {
+            background-color: #e67e22;
+            color: #ffffff;
+            border-color: #d35400;
+        }
+        .rating-card.today:hover {
+            background-color: #d35400;
+        }
+        /* عند التفعيل يأخذ اللون الطبيعي لحالة active */
+        .rating-card.today.active {
+            background-color: var(--accent-color) !important;
+            color: white !important;
+            border-color: var(--accent-color) !important;
+        }
+        [data-theme="dark"] .rating-card.today.active {
+            color: #0f172a !important;
+        }
+
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -433,7 +452,7 @@
     <div class="rating-filter-wrapper">
         <div class="filter-buttons-row">
             <button class="btn btn-secondary" id="ratingFilterBtn" onclick="toggleRatingFilter()"><i class="ph ph-funnel"></i> الفرز حسب التقييم</button>
-            <button class="btn btn-secondary" id="dateFilterBtn" onclick="toggleDateFilter()"><i class="ph ph-calendar-blank"></i>مقررات الطالب</button>
+            <button class="btn btn-secondary" id="dateFilterBtn" onclick="toggleDateFilter()"><i class="ph ph-calendar-blank"></i> مقررات الطالب</button>
         </div>
         
         <div class="rating-cards-scroll" id="ratingCardsScroll">
@@ -757,17 +776,42 @@
             });
         }
 
-        /* --- منطق الفرز حسب التاريخ --- */
+        /* --- منطق الفرز حسب التاريخ ودالة التحقق من اليوم --- */
         function parseArabicDate(dateStr) {
             if (!dateStr) return new Date(0);
             let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
             let parts = cleaned.split('/');
             if (parts.length === 3) {
-                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+                let p1 = parseInt(cleanParts[0]) || 0;
+                let p2 = parseInt(cleanParts[1]) || 0;
+                let p3 = parseInt(cleanParts[2]) || 0;
+                
+                if (p3 > 1000) {
+                    if (p2 > 12) {
+                        return new Date(p3, p1 - 1, p2);
+                    } else {
+                        return new Date(p3, p2 - 1, p1);
+                    }
+                } else if (p1 > 1000) {
+                    return new Date(p1, p2 - 1, p3);
+                }
+                return new Date(p3, p2 - 1, p1);
             } else if (parts.length === 2) {
-                return new Date(new Date().getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+                return new Date(new Date().getFullYear(), parseInt(cleanParts[1]) - 1, parseInt(cleanParts[0]));
             }
             return new Date(0);
+        }
+
+        function isTodayDate(dateStr) {
+            if (!dateStr) return false;
+            const targetDate = parseArabicDate(dateStr);
+            const today = new Date();
+            
+            return targetDate.getDate() === today.getDate() &&
+                   targetDate.getMonth() === today.getMonth() &&
+                   targetDate.getFullYear() === today.getFullYear();
         }
 
         function formatDisplayDate(dateStr) {
@@ -775,7 +819,10 @@
             let cleaned = dateStr.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
             let parts = cleaned.split('/');
             if (parts.length >= 2) {
-                return `${parseInt(parts[1])}/${parseInt(parts[0])}`;
+                let p1 = parseInt(parts[0].replace(/\D/g, ''));
+                let p2 = parseInt(parts[1].replace(/\D/g, ''));
+                if (isNaN(p1) || isNaN(p2)) return dateStr;
+                return `${p2}/${p1}`;
             }
             return dateStr;
         }
@@ -834,7 +881,16 @@
             dates.forEach(dateStr => {
                 const card = document.createElement('div');
                 card.className = 'rating-card';
-                if (activeDateFilter === dateStr) card.classList.add('active');
+                
+                // إضافة كلاس today إذا كان التاريخ يطابق تاريخ اليوم في الهاتف
+                if (isTodayDate(dateStr)) {
+                    card.classList.add('today');
+                }
+
+                if (activeDateFilter === dateStr) {
+                    card.classList.add('active');
+                }
+                
                 card.innerText = formatDisplayDate(dateStr);
                 card.onclick = () => selectDateFilter(dateStr);
                 dateScroll.appendChild(card);
@@ -1400,7 +1456,13 @@
                         else { badgeClass = 'status-not-memorized'; borderClass = 'border-not-memorized'; statusText = 'لم يحفظ'; }
 
                         confidenceSectionHTML = `<div class="confidence-level" style="color: ${confidenceColor};"><i class="ph ph-shield-check"></i> مستوى الثقة: ${confidenceScore}%</div>`;
-                        progressHTML = calculateProgressText(attempts);
+                        
+                        // تم إلغاء ميزة المقارنات عند تفعيل فلتر مقررات الطالب (activeDateFilter !== null)
+                        if (activeDateFilter === null) {
+                            progressHTML = calculateProgressText(attempts);
+                        } else {
+                            progressHTML = '';
+                        }
                     }
 
                     card.classList.add(borderClass);
@@ -2050,7 +2112,7 @@
                             الأخطاء: ${attempt.errors} | الترددات: ${attempt.hesitations} | الشكوك: ${attempt.doubts} | التجويد: ${tajweedVal}${scopeText}
                         </span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="display: flex; align- items: center; gap: 6px;">
                         <div style="font-weight:bold; font-size:15px; color: var(--accent-color);">
                             ${scoreTextDisplay}
                         </div>
