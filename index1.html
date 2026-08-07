@@ -2339,9 +2339,12 @@
 
         function advanceReviewPlansIfDue(student, doneIdx) {
             if (!student.reviewPlans || student.reviewPlans.length === 0) return;
+            const todayStr = new Date().toLocaleDateString('ar-EG');
             let changed = false;
             student.reviewPlans.forEach(plan => {
                 if (!plan.completed && plan.currentIdx === doneIdx) {
+                    plan.lastCompletedIdx = doneIdx;
+                    plan.lastCompletedDate = todayStr;
                     if (plan.currentIdx === plan.toIdx) {
                         plan.completed = true;
                     } else {
@@ -2353,10 +2356,9 @@
             if (changed) saveStudentsToStorage();
         }
 
-        function getReviewPlanDoneToday(student, plan) {
+        function getReviewPlanDoneToday(plan) {
             const todayStr = new Date().toLocaleDateString('ar-EG');
-            const attempts = student.data && student.data[plan.currentIdx];
-            return !!(attempts && attempts.some(att => att.date === todayStr));
+            return plan.lastCompletedDate === todayStr;
         }
 
         function renderReviewCards() {
@@ -2382,8 +2384,24 @@
             student.reviewPlans.forEach(plan => {
                 const card = document.createElement('div');
                 card.className = 'review-plan-card';
+                const doneToday = getReviewPlanDoneToday(plan);
+                const prevHTML = plan.lastCompletedIdx
+                    ? `<div class="rp-prev">آخر ما تم: ${juzNames[plan.lastCompletedIdx - 1]}</div>`
+                    : '';
 
-                if (plan.completed) {
+                if (doneToday) {
+                    // تم تسجيل مراجعة اليوم فعلاً - نعرض نفس الحزب المُنجز اليوم مع علامة صح، بدون القفز للحزب التالي
+                    card.classList.add('rp-done');
+                    card.innerHTML = `
+                        <div class="rp-label">${plan.label} <i class="ph ph-check-circle"></i></div>
+                        <div class="rp-hizb quran-font">${juzNames[plan.lastCompletedIdx - 1]}</div>
+                        <div class="rp-status">تم تسجيل اليوم ✅</div>
+                    `;
+                    card.onclick = () => {
+                        switchTab('ahzab');
+                        openEvaluation(plan.lastCompletedIdx);
+                    };
+                } else if (plan.completed) {
                     card.classList.add('rp-completed');
                     card.innerHTML = `
                         <div class="rp-label">${plan.label}</div>
@@ -2391,19 +2409,12 @@
                     `;
                     card.onclick = () => alert(`(${plan.label}) انتهى مسار هذه المراجعة. يمكنك إعادة ضبطه من "مسارات المراجعة".`);
                 } else {
-                    const doneToday = getReviewPlanDoneToday(student, plan);
-                    card.classList.add(doneToday ? 'rp-done' : 'rp-pending');
-
-                    const prevIdx = plan.currentIdx + (plan.direction === 'down' ? 1 : -1);
-                    const prevInRange = (plan.direction === 'down') ? (prevIdx <= plan.fromIdx && prevIdx > plan.currentIdx) : (prevIdx >= plan.fromIdx && prevIdx < plan.currentIdx);
-                    const prevHTML = (prevInRange && prevIdx >= 1 && prevIdx <= 60)
-                        ? `<div class="rp-prev">آخر ما تم: ${juzNames[prevIdx - 1]}</div>`
-                        : '';
-
+                    // لم يُسجَّل شيء اليوم بعد - نعرض الحزب المستحق حالياً
+                    card.classList.add('rp-pending');
                     card.innerHTML = `
-                        <div class="rp-label">${plan.label} ${doneToday ? '<i class="ph ph-check-circle"></i>' : '<i class="ph ph-clock"></i>'}</div>
+                        <div class="rp-label">${plan.label} <i class="ph ph-clock"></i></div>
                         <div class="rp-hizb quran-font">${juzNames[plan.currentIdx - 1]}</div>
-                        <div class="rp-status">${doneToday ? 'تم تسجيل اليوم' : 'المستحق اليوم — اضغط للتسميع'}</div>
+                        <div class="rp-status">المستحق اليوم — اضغط للتسميع</div>
                         ${prevHTML}
                     `;
                     card.onclick = () => {
