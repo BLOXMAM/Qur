@@ -2467,7 +2467,7 @@
 
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <strong style="font-size:12px; color:var(--accent-color); font-family: Uthmani;">${statusText}</strong>
+                    <strong style="font-size:18px; color:var(--accent-color); font-family: Uthmani;">${statusText}</strong>
                     <div style="display:flex; gap:4px;">
                         ${plan ? `<button type="button" class="btn btn-warning" style="padding:3px 8px; font-size:11px;" onclick="this.closest('.review-plan-row').dataset.forceReset='1'; this.disabled=true; this.innerText='سيُعاد ضبطه عند الحفظ';"><i class="ph ph-arrow-counter-clockwise"></i> إعادة ضبط</button>` : ''}
                         <button type="button" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="this.closest('.review-plan-row').remove()"><i class="ph ph-trash"></i> حذف</button>
