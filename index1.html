@@ -2397,7 +2397,7 @@
                 card.className = 'review-plan-card';
                 const doneToday = getReviewPlanDoneToday(plan);
                 const prevHTML = plan.lastCompletedIdx
-                    ? `<div class="rp-prev">آخر ما تم: ${juzNames[plan.lastCompletedIdx - 1]}</div>`
+                    ? `<div class="rp-prev">آخر ما تم:<span style="font-family: Uthmani;">${juzNames[plan.lastCompletedIdx - 1]} </span></div>`
                     : '';
 
                 if (doneToday) {
@@ -2406,7 +2406,7 @@
                     card.innerHTML = `
                         <div class="rp-label">${plan.label} <i class="ph ph-check-circle"></i></div>
                         <div class="rp-hizb quran-font">${juzNames[plan.lastCompletedIdx - 1]}</div>
-                        <div class="rp-status">تم تسجيل اليوم ✅</div>
+                        <div class="rp-status">تم إنهاءه✅</div>
                     `;
                     card.onclick = () => {
                         switchTab('ahzab');
