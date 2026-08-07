@@ -2329,12 +2329,22 @@
              (عبر advanceReviewPlansIfDue)، وإلا يبقى نفس الحزب المستحق لليوم التالي.
            ====================================================================== */
 
-        function buildHizbOptionsHTML(selectedIdx) {
+        function buildUnitOptionsHTML(unit, selectedIdx) {
+            const namesArr = (unit === 'ajza') ? ajzaNames : juzNames;
+            const unitLabel = (unit === 'ajza') ? 'جزء' : 'حزب';
             let html = '';
-            for (let i = 1; i <= 60; i++) {
-                html += `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>حزب ${i} - ${juzNames[i - 1]}</option>`;
+            for (let i = 1; i <= namesArr.length; i++) {
+                html += `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>${unitLabel} ${i} - ${namesArr[i - 1]}</option>`;
             }
             return html;
+        }
+
+        function updateReviewPlanUnitOptions(selectEl) {
+            const row = selectEl.closest('.review-plan-row');
+            const unit = selectEl.value;
+            const maxCount = (unit === 'ajza') ? 30 : 60;
+            row.querySelector('.rp-from').innerHTML = buildUnitOptionsHTML(unit, 1);
+            row.querySelector('.rp-to').innerHTML = buildUnitOptionsHTML(unit, maxCount);
         }
 
         function getPlanRange(plan) {
@@ -2396,33 +2406,36 @@
                 const card = document.createElement('div');
                 card.className = 'review-plan-card';
                 const doneToday = getReviewPlanDoneToday(plan);
+                const unit = plan.unit || 'ahzab';
+                const namesArr = (unit === 'ajza') ? ajzaNames : juzNames;
+                const unitLabel = (unit === 'ajza') ? 'جزء' : 'حزب';
                 const prevHTML = plan.lastCompletedIdx
-                    ? `<div class="rp-prev">آخر ما تم:<span style="font-family: Uthmani;"> ${juzNames[plan.lastCompletedIdx - 1]} </span></div>`
+                    ? `<div class="rp-prev">آخر ما تم: <span style="font-family: Uthmani;"> ${namesArr[plan.lastCompletedIdx - 1]}</span></div>`
                     : '';
 
                 if (doneToday) {
-                    // تم تسجيل مراجعة اليوم فعلاً - نعرض نفس الحزب المُنجز اليوم مع علامة صح، بدون القفز للحزب التالي
+                    // تم تسجيل مراجعة اليوم فعلاً - نعرض نفس الوحدة المُنجزة اليوم مع علامة صح، بدون القفز للوحدة التالية
                     card.classList.add('rp-done');
                     card.innerHTML = `
-                        <div class="rp-label">${plan.label} <i class="ph ph-check-circle"></i></div>
-                        <div class="rp-hizb quran-font">${juzNames[plan.lastCompletedIdx - 1]}</div>
+                        <div class="rp-label">${plan.label} <span style="opacity:.6; font-size:10px;">(${unitLabel})</span> <i class="ph ph-check-circle"></i></div>
+                        <div class="rp-hizb quran-font">${namesArr[plan.lastCompletedIdx - 1]}</div>
                         <div class="rp-status">تم إنهاءه✅ </div>
                     `;
                     card.onclick = () => {
-                        switchTab('ahzab');
+                        switchTab(unit);
                         openEvaluation(plan.lastCompletedIdx);
                     };
                 } else {
-                    // لم يُسجَّل شيء اليوم بعد - نعرض الحزب المستحق حالياً
+                    // لم يُسجَّل شيء اليوم بعد - نعرض الوحدة المستحقة حالياً
                     card.classList.add('rp-pending');
                     card.innerHTML = `
-                        <div class="rp-label">${plan.label} <i class="ph ph-clock"></i></div>
-                        <div class="rp-hizb quran-font">${juzNames[plan.currentIdx - 1]}</div>
+                        <div class="rp-label">${plan.label} <span style="opacity:.6; font-size:10px;">(${unitLabel})</span> <i class="ph ph-clock"></i></div>
+                        <div class="rp-hizb quran-font">${namesArr[plan.currentIdx - 1]}</div>
                         <div class="rp-status">المستحق اليوم — اضغط للتسميع</div>
                         ${prevHTML}
                     `;
                     card.onclick = () => {
-                        switchTab('ahzab');
+                        switchTab(unit);
                         openEvaluation(plan.currentIdx);
                     };
                 }
@@ -2445,26 +2458,38 @@
             const fromIdx = plan ? plan.fromIdx : 60;
             const toIdx = plan ? plan.toIdx : 1;
             const direction = plan ? plan.direction : 'down';
+            const unit = plan ? (plan.unit || 'ahzab') : 'ahzab';
+            const namesArr = (unit === 'ajza') ? ajzaNames : juzNames;
+            const unitLabel = (unit === 'ajza') ? 'جزء' : 'حزب';
             const statusText = plan
-                ? `المستحق حالياً: حزب ${plan.currentIdx} - ${juzNames[plan.currentIdx - 1]}`
+                ? `المستحق حالياً: ${unitLabel} ${plan.currentIdx} - ${namesArr[plan.currentIdx - 1]}`
                 : 'مسار جديد';
 
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <strong style="font-size:12px; color:var(--accent-color);">${statusText}</strong>
+                    <strong style="font-size:18px; color:var(--accent-color); font-family: Uthmani;">${statusText}</strong>
                     <div style="display:flex; gap:4px;">
                         ${plan ? `<button type="button" class="btn btn-warning" style="padding:3px 8px; font-size:11px;" onclick="this.closest('.review-plan-row').dataset.forceReset='1'; this.disabled=true; this.innerText='سيُعاد ضبطه عند الحفظ';"><i class="ph ph-arrow-counter-clockwise"></i> إعادة ضبط</button>` : ''}
                         <button type="button" class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="this.closest('.review-plan-row').remove()"><i class="ph ph-trash"></i> حذف</button>
                     </div>
                 </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div class="form-group" style="flex:1; min-width:120px; margin-bottom:0;">
+                        <label>الوحدة:</label>
+                        <select class="rp-unit" onchange="updateReviewPlanUnitOptions(this)">
+                            <option value="ahzab" ${unit === 'ahzab' ? 'selected' : ''}>حزب (١-٦٠)</option>
+                            <option value="ajza" ${unit === 'ajza' ? 'selected' : ''}>جزء (١-٣٠)</option>
+                        </select>
+                    </div>
+                </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                     <div class="form-group" style="flex:1; min-width:140px; margin-bottom:0;">
-                        <label>من حزب:</label>
-                        <select class="rp-from">${buildHizbOptionsHTML(fromIdx)}</select>
+                        <label>من:</label>
+                        <select class="rp-from">${buildUnitOptionsHTML(unit, fromIdx)}</select>
                     </div>
                     <div class="form-group" style="flex:1; min-width:140px; margin-bottom:0;">
-                        <label>إلى حزب:</label>
-                        <select class="rp-to">${buildHizbOptionsHTML(toIdx)}</select>
+                        <label>إلى:</label>
+                        <select class="rp-to">${buildUnitOptionsHTML(unit, toIdx)}</select>
                     </div>
                     <div class="form-group" style="flex:1; min-width:130px; margin-bottom:0;">
                         <label>اتجاه المراجعة:</label>
@@ -2504,6 +2529,7 @@
             const newPlans = [];
 
             rows.forEach((row, idx) => {
+                const unit = row.querySelector('.rp-unit').value;
                 const fromIdx = parseInt(row.querySelector('.rp-from').value);
                 const toIdx = parseInt(row.querySelector('.rp-to').value);
                 const direction = row.querySelector('.rp-direction').value;
@@ -2518,7 +2544,7 @@
 
                 if (isExisting && !forceReset) {
                     const oldPlan = (student.reviewPlans || []).find(p => p.id === id);
-                    if (oldPlan && oldPlan.fromIdx === fromIdx && oldPlan.toIdx === toIdx && oldPlan.direction === direction) {
+                    if (oldPlan && oldPlan.fromIdx === fromIdx && oldPlan.toIdx === toIdx && oldPlan.direction === direction && (oldPlan.unit || 'ahzab') === unit) {
                         currentIdx = oldPlan.currentIdx;
                         lastCompletedIdx = oldPlan.lastCompletedIdx || null;
                         lastCompletedDate = oldPlan.lastCompletedDate || null;
@@ -2532,6 +2558,7 @@
                 newPlans.push({
                     id: id,
                     label: `مراجعة ${idx + 1}`,
+                    unit: unit,
                     fromIdx: fromIdx,
                     toIdx: toIdx,
                     direction: direction,
