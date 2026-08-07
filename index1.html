@@ -2337,18 +2337,29 @@
             return html;
         }
 
+        function getPlanRange(plan) {
+            const lowIdx = Math.min(plan.fromIdx, plan.toIdx);
+            const highIdx = Math.max(plan.fromIdx, plan.toIdx);
+            const startIdx = (plan.direction === 'up') ? lowIdx : highIdx;
+            const endIdx = (plan.direction === 'up') ? highIdx : lowIdx;
+            const step = (plan.direction === 'up') ? 1 : -1;
+            return { startIdx, endIdx, step };
+        }
+
         function advanceReviewPlansIfDue(student, doneIdx) {
             if (!student.reviewPlans || student.reviewPlans.length === 0) return;
             const todayStr = new Date().toLocaleDateString('ar-EG');
             let changed = false;
             student.reviewPlans.forEach(plan => {
-                if (!plan.completed && plan.currentIdx === doneIdx) {
+                if (plan.currentIdx === doneIdx) {
                     plan.lastCompletedIdx = doneIdx;
                     plan.lastCompletedDate = todayStr;
-                    if (plan.currentIdx === plan.toIdx) {
-                        plan.completed = true;
+
+                    const { startIdx, endIdx, step } = getPlanRange(plan);
+                    if (plan.currentIdx === endIdx) {
+                        plan.currentIdx = startIdx; // اكتملت الدورة - يبدأ من جديد تلقائياً (دوامة)
                     } else {
-                        plan.currentIdx += (plan.direction === 'down' ? -1 : 1);
+                        plan.currentIdx += step;
                     }
                     changed = true;
                 }
@@ -2401,13 +2412,6 @@
                         switchTab('ahzab');
                         openEvaluation(plan.lastCompletedIdx);
                     };
-                } else if (plan.completed) {
-                    card.classList.add('rp-completed');
-                    card.innerHTML = `
-                        <div class="rp-label">${plan.label}</div>
-                        <div class="rp-status"><i class="ph ph-check-circle"></i> انتهت هذه المراجعة</div>
-                    `;
-                    card.onclick = () => alert(`(${plan.label}) انتهى مسار هذه المراجعة. يمكنك إعادة ضبطه من "مسارات المراجعة".`);
                 } else {
                     // لم يُسجَّل شيء اليوم بعد - نعرض الحزب المستحق حالياً
                     card.classList.add('rp-pending');
@@ -2442,7 +2446,7 @@
             const toIdx = plan ? plan.toIdx : 1;
             const direction = plan ? plan.direction : 'down';
             const statusText = plan
-                ? (plan.completed ? 'الحالة: انتهت المراجعة' : `المستحق حالياً: حزب ${plan.currentIdx} - ${juzNames[plan.currentIdx - 1]}`)
+                ? `المستحق حالياً: حزب ${plan.currentIdx} - ${juzNames[plan.currentIdx - 1]}`
                 : 'مسار جديد';
 
             div.innerHTML = `
@@ -2507,14 +2511,17 @@
                 const forceReset = row.dataset.forceReset === '1';
                 let id = row.dataset.planId;
 
-                let currentIdx = fromIdx;
-                let completed = false;
+                const { startIdx } = getPlanRange({ fromIdx, toIdx, direction });
+                let currentIdx = startIdx;
+                let lastCompletedIdx = null;
+                let lastCompletedDate = null;
 
                 if (isExisting && !forceReset) {
                     const oldPlan = (student.reviewPlans || []).find(p => p.id === id);
                     if (oldPlan && oldPlan.fromIdx === fromIdx && oldPlan.toIdx === toIdx && oldPlan.direction === direction) {
                         currentIdx = oldPlan.currentIdx;
-                        completed = oldPlan.completed;
+                        lastCompletedIdx = oldPlan.lastCompletedIdx || null;
+                        lastCompletedDate = oldPlan.lastCompletedDate || null;
                     }
                 }
 
@@ -2529,7 +2536,8 @@
                     toIdx: toIdx,
                     direction: direction,
                     currentIdx: currentIdx,
-                    completed: completed
+                    lastCompletedIdx: lastCompletedIdx,
+                    lastCompletedDate: lastCompletedDate
                 });
             });
 
