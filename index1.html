@@ -1953,8 +1953,8 @@
                 }
             }
 
-            if (currentSelectedTab === 'ahzab' && editingAttemptIndex === null) {
-                advanceReviewPlansIfDue(student, currentSelectedIndex);
+            if ((currentSelectedTab === 'ahzab' || currentSelectedTab === 'ajza') && editingAttemptIndex === null) {
+                advanceReviewPlansIfDue(student, currentSelectedIndex, currentSelectedTab);
             }
 
             saveStudentsToStorage();
@@ -2356,12 +2356,13 @@
             return { startIdx, endIdx, step };
         }
 
-        function advanceReviewPlansIfDue(student, doneIdx) {
+        function advanceReviewPlansIfDue(student, doneIdx, doneTab) {
             if (!student.reviewPlans || student.reviewPlans.length === 0) return;
             const todayStr = new Date().toLocaleDateString('ar-EG');
             let changed = false;
             student.reviewPlans.forEach(plan => {
-                if (plan.currentIdx === doneIdx) {
+                const planUnit = plan.unit || 'ahzab';
+                if (planUnit === doneTab && plan.currentIdx === doneIdx) {
                     plan.lastCompletedIdx = doneIdx;
                     plan.lastCompletedDate = todayStr;
 
