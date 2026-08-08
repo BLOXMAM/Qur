@@ -1953,8 +1953,8 @@
                 }
             }
 
-            if (currentSelectedTab === 'ahzab' && editingAttemptIndex === null) {
-                advanceReviewPlansIfDue(student, currentSelectedIndex);
+            if ((currentSelectedTab === 'ahzab' || currentSelectedTab === 'ajza') && editingAttemptIndex === null) {
+                advanceReviewPlansIfDue(student, currentSelectedIndex, currentSelectedTab);
             }
 
             saveStudentsToStorage();
@@ -2329,7 +2329,7 @@
              (عبر advanceReviewPlansIfDue)، وإلا يبقى نفس الحزب المستحق لليوم التالي.
            ====================================================================== */
 
-        function buildUnitOptionsHTML(unit, selectedIdx) {
+    function buildUnitOptionsHTML(unit, selectedIdx) {
             const namesArr = (unit === 'ajza') ? ajzaNames : juzNames;
             const unitLabel = (unit === 'ajza') ? 'جزء' : 'حزب';
             let html = '';
@@ -2339,14 +2339,38 @@
             return html;
         }
 
+        function buildStartOptionsHTML(unit, fromIdx, toIdx, selectedIdx) {
+            const namesArr = (unit === 'ajza') ? ajzaNames : juzNames;
+            const unitLabel = (unit === 'ajza') ? 'جزء' : 'حزب';
+            const lowIdx = Math.min(fromIdx, toIdx);
+            const highIdx = Math.max(fromIdx, toIdx);
+            let html = '';
+            for (let i = lowIdx; i <= highIdx; i++) {
+                html += `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>${unitLabel} ${i} - ${namesArr[i - 1]}</option>`;
+            }
+            return html;
+        }
+
+        function refreshReviewPlanStartOptions(row) {
+            const unit = row.querySelector('.rp-unit').value;
+            const fromIdx = parseInt(row.querySelector('.rp-from').value);
+            const toIdx = parseInt(row.querySelector('.rp-to').value);
+            const startSel = row.querySelector('.rp-start');
+            const prevVal = startSel ? parseInt(startSel.value) : NaN;
+            const lowIdx = Math.min(fromIdx, toIdx);
+            const highIdx = Math.max(fromIdx, toIdx);
+            const selected = (!isNaN(prevVal) && prevVal >= lowIdx && prevVal <= highIdx) ? prevVal : lowIdx;
+            startSel.innerHTML = buildStartOptionsHTML(unit, fromIdx, toIdx, selected);
+        }
+
         function updateReviewPlanUnitOptions(selectEl) {
             const row = selectEl.closest('.review-plan-row');
             const unit = selectEl.value;
             const maxCount = (unit === 'ajza') ? 30 : 60;
             row.querySelector('.rp-from').innerHTML = buildUnitOptionsHTML(unit, 1);
             row.querySelector('.rp-to').innerHTML = buildUnitOptionsHTML(unit, maxCount);
+            refreshReviewPlanStartOptions(row);
         }
-
         function getPlanRange(plan) {
             const lowIdx = Math.min(plan.fromIdx, plan.toIdx);
             const highIdx = Math.max(plan.fromIdx, plan.toIdx);
@@ -2356,12 +2380,13 @@
             return { startIdx, endIdx, step };
         }
 
-        function advanceReviewPlansIfDue(student, doneIdx) {
+        function advanceReviewPlansIfDue(student, doneIdx, doneTab) {
             if (!student.reviewPlans || student.reviewPlans.length === 0) return;
             const todayStr = new Date().toLocaleDateString('ar-EG');
             let changed = false;
             student.reviewPlans.forEach(plan => {
-                if (plan.currentIdx === doneIdx) {
+                const planUnit = plan.unit || 'ahzab';
+                if (planUnit === doneTab && plan.currentIdx === doneIdx) {
                     plan.lastCompletedIdx = doneIdx;
                     plan.lastCompletedDate = todayStr;
 
@@ -2455,7 +2480,7 @@
             div.dataset.existing = plan ? '1' : '0';
             div.dataset.forceReset = '0';
 
-            const fromIdx = plan ? plan.fromIdx : 60;
+ const fromIdx = plan ? plan.fromIdx : 60;
             const toIdx = plan ? plan.toIdx : 1;
             const direction = plan ? plan.direction : 'down';
             const unit = plan ? (plan.unit || 'ahzab') : 'ahzab';
@@ -2464,6 +2489,7 @@
             const statusText = plan
                 ? `المستحق حالياً: ${unitLabel} ${plan.currentIdx} - ${namesArr[plan.currentIdx - 1]}`
                 : 'مسار جديد';
+            const startIdxDefault = plan ? plan.currentIdx : getPlanRange({ fromIdx, toIdx, direction }).startIdx;
 
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
@@ -2482,14 +2508,14 @@
                         </select>
                     </div>
                 </div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
                     <div class="form-group" style="flex:1; min-width:140px; margin-bottom:0;">
                         <label>من:</label>
-                        <select class="rp-from">${buildUnitOptionsHTML(unit, fromIdx)}</select>
+                        <select class="rp-from" onchange="refreshReviewPlanStartOptions(this.closest('.review-plan-row'))">${buildUnitOptionsHTML(unit, fromIdx)}</select>
                     </div>
                     <div class="form-group" style="flex:1; min-width:140px; margin-bottom:0;">
                         <label>إلى:</label>
-                        <select class="rp-to">${buildUnitOptionsHTML(unit, toIdx)}</select>
+                        <select class="rp-to" onchange="refreshReviewPlanStartOptions(this.closest('.review-plan-row'))">${buildUnitOptionsHTML(unit, toIdx)}</select>
                     </div>
                     <div class="form-group" style="flex:1; min-width:130px; margin-bottom:0;">
                         <label>اتجاه المراجعة:</label>
@@ -2497,6 +2523,12 @@
                             <option value="down" ${direction === 'down' ? 'selected' : ''}>نازلة (تنازلي)</option>
                             <option value="up" ${direction === 'up' ? 'selected' : ''}>طالعة (تصاعدي)</option>
                         </select>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <div class="form-group" style="flex:1; min-width:140px; margin-bottom:0;">
+                        <label>ابدأ من: <span style="color: #767676; font-size: 7px;">(لا يمكن تعديلها بعد حفظ المسار يمكن تعديل البدء عند إنشاء مسار جديد)</span></label>
+                        <select class="rp-start">${buildStartOptionsHTML(unit, fromIdx, toIdx, startIdxDefault)}</select>
                     </div>
                 </div>
             `;
@@ -2528,17 +2560,17 @@
             const rows = document.querySelectorAll('#reviewPlansList .review-plan-row');
             const newPlans = [];
 
-            rows.forEach((row, idx) => {
+ rows.forEach((row, idx) => {
                 const unit = row.querySelector('.rp-unit').value;
                 const fromIdx = parseInt(row.querySelector('.rp-from').value);
                 const toIdx = parseInt(row.querySelector('.rp-to').value);
                 const direction = row.querySelector('.rp-direction').value;
+                const startVal = parseInt(row.querySelector('.rp-start').value);
                 const isExisting = row.dataset.existing === '1';
                 const forceReset = row.dataset.forceReset === '1';
                 let id = row.dataset.planId;
 
-                const { startIdx } = getPlanRange({ fromIdx, toIdx, direction });
-                let currentIdx = startIdx;
+                let currentIdx = startVal;
                 let lastCompletedIdx = null;
                 let lastCompletedDate = null;
 
